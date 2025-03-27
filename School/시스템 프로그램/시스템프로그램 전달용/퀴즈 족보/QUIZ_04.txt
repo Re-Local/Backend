@@ -1,0 +1,73 @@
+SP Quiz-09 (Chap.6-1)
+다음 퀴즈 문항에 각각 답하시오.
+
+1. For 4096×8 DRAM, we are going to minimize the number of address lines between the memory controller and the DRAM chip. Assuming that the rows and columns of the DRAM chip are power-of-2 array, what is the minimum number of bits needed to address both the rows and columns of the DRAM array?
+
+Answer = (     6     )
+
+2. What is the capacity of a hard disk with 4 platters, 32768 cylinders, an average of 512 sectors per track, and 512 bytes per sector? Assume that both sides of each platter are used for recording data. Give your answer in GB(Giga-Bytes). (1GB = 1024KB)
+
+Answer = (     64     ) GB
+
+3. Estimate the average time (in ms) to access a sector on the hard disk with 4ms seek time, 12,000 rpm rotational rate, and 128 sectors in each track.
+(답) 6.539ms
+
+4. An SSD package consists of one or more flash memory chips, which replace the mechanical drive in a conventional rotating disk, and a ( flash translation layer ), which is a hardware/firmware device that plays the same role as a disk controller, translating requests for logical blocks into accesses of the underlying physical device.
+
+5. Which of the following is FALSE for the characteristics of the flash SSD storage?
+(답) Byte-addressing is possible
+
+#
+
+SP Quiz-10 (Chap.6-2/3)
+다음 퀴즈 문항에 각각 답하시오.
+
+1. In a program with good ( temporal locality ), a memory location that is referenced once is likely to be referenced again multiple times in the near future.
+
+2. Assume the following declaration and two functions, bar1 and bar2, which perform the same operation with varying degrees of spatial locality. Which function has better spatial locality?
+
+   typedef struct {
+      int a[3] ;
+      int b[3];
+   } point;
+   point x[100];
+
+   void bar1(point *p, int n) {
+      int i, j;
+      for (i = 0; i < n; i++) {
+         for (j = 0; j < 3; j++) {
+            x[i].a[j] = 0;
+            x[i].b[j] = 0;
+         }
+      }
+   }
+
+   void bar2(point *p, int n) {
+      int i, j;
+      for (i = 0; i < n; i++) {
+         for (j = 0; j < 3; j++)
+            x[i].a[j] = 0;
+         for (j = 0; j < 3; j++)
+            x[i].b[j] = 0;
+      }
+   }
+
+(답) The function bar2 has better spatial locality
+
+3. How many cache sets are there in the cache memory that has the following parameters?
+
+   Cache capacity = 4,096Bytes, 4 cache lines in a set, Block size = 8Bytes,
+   and 32-bit memory address
+
+   Answer = (     128     )
+
+4. How many tag bits are necessary in the cache memory that has the following parameters?
+
+   Cache capacity = 4,096Bytes, 8 cache lines in a set, Block size = 32Bytes,
+   and 32-bit memory address
+
+   Answer = (     23     ) bits
+
+5. When we write a word w that is already cached (a write hit), we can update the word w in the cache and immediately write w’s cache block to the next lower level. While simple, this scheme has the disadvantage of causing bus traffic with every write. This policy is called ( write-through ).
+
+#

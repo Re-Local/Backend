@@ -1,0 +1,161 @@
+SP Quiz-06 (Chap. 3-6)
+다음 퀴즈 문항에 각각 답하시오.
+
+1. Consider the following declaration:
+
+   int A[6][4];
+
+   Assuming that the array A starts at address x, what is the address value of A[i] in x86-64 system?
+
+(답) x + 16i
+
+2. Suppose P, the start address of short integer array A, and long integer index i are stored in registers %rdx and %rcx, respectively. What is the assembly-code implementation for the following expression? The value of the expression should be stored in register %rax or %ax.
+
+   Expression: P + 2 + i
+
+(답) leaq 4(%rdx, %rcx, 2), %rax
+
+3. Consider the following declaration:
+
+   short int B[5][3];
+
+   Assuming that the array B starts at address 800, what is the address of the array element  B[2][1]?
+
+(답) (     814     )
+
+4. What is the byte offset of the element d of the following structure declaration? You should consider data alignment restrictions.
+
+   struct {
+      char a;
+      int b;
+      short c;
+      int d;
+   } rec4;
+
+(답) (     12     )
+
+5. What is the total size (in bytes) of the following structure? You should consider data alignment restrictions.
+
+   struct {
+      char a;
+      int b;
+      short c;
+      short *d;
+      int e;
+   } rec;
+
+(답) (     32     )
+
+#
+
+SP Quiz-07 (Chap. 3-7/8)
+다음 퀴즈 문항에 각각 답하시오.
+
+1. (          ) has become standard practice in Linux systems. It is one of a larger class of techniques known as ASLR. With ASLR, different parts of the program, including program code, library code, stack, global variables, and heap data, are loaded into different regions of memory each time a program is run.
+(답) Stack randomization
+
+2. Running a stack-checking code 10,000 times on a system running Linux version 2.6.16, we obtained addresses ranging from a minimum of 0xffffa754 to a maximum of 0xffffd754. If we attempted a buffer overflow with a 256-byte nop sled, about how many attempts would it take at least to test all starting addresses?
+(답) (     48     )
+
+3. Which of the following instructions converts a long data in %rax into the float data in %xmm0?
+(답) vcvtsi2ssq %rax, %xmm0, %xmm0
+
+4. For the following C function, the types of the second argument q is defined by typedef.
+
+   double fun4(int p, a2_t q, float r, double s) {
+      return p / (q + r) - s;
+   }
+
+   When compiled, GCC generates the following code:
+
+   fun4:
+      vcvtsi2ssq %rsi, %xmm2, %xmm2
+      vaddss %xmm0, %xmm2, %xmm0
+      vcvtsi2ss %edi, %xmm2, %xmm2
+      vdivss %xmm0, %xmm2, %xmm0
+      ...
+      ret
+
+   Determine the type of the second argument q. Answer in C data type name.
+
+(답) (     long     )
+
+5. Consider the following C function and its compiled code. What is the missing expression in the C function? (Here, -2147483648 is TMIN32)
+
+   double fun5(double x) {
+      return (          );
+   }
+
+   fun5:
+      vmovsd .L5(%rip), %xmm1
+      vxorpd %xmm1, %xmm0, %xmm0
+   .L5:
+      .long 0
+      .long –2147483648
+      .long 0
+      .long 0
+
+(답) -x
+
+#
+
+SP Quiz-08 (Chap. 5)
+다음 퀴즈 문항에 각각 답하시오.
+
+1. The CPU with (          ) architecture can perform multiple operations on every clock cycle and out of order, meaning that the order in which instructions execute need not correspond to their ordering in the machine-level program.
+(답) superscalar
+
+2. (          ) means the effective number of CPU cycles consumed for processing 1 element in a vector or a list. It is a convenient way to express program performance that operates on vectors or lists.
+(답) CPE
+
+3. The following problem illustrates the way memory aliasing can cause unexpected program behavior. Consider the following procedure to swap two values:
+
+   /* Swap value x at xp with value y at yp •/
+   void swap(long *xp, long *yp)
+   {
+      *xp = *xp + *yp; /* x+y */
+      *yp = *xp - *yp; /* x+y-y = x */
+      *xp = *xp - *yp; /* x+y-x = y */
+   }
+
+If this procedure is called with xp equal to yp, what effect will it have?
+(답) x and y will be set to zero
+
+4. Consider the following functions:
+
+   long min(long x, long y) { return x < y ? x : y; }
+   long max(long x, long y) { return x < y ? y : x; }
+   void incr(long *xp, long v) { *xp += v; }
+   long square(long x) { return x*x; }
+
+   The following code fragment calls these functions:
+
+   for (i = max(x, y) - 1; i >= min(x, y); incr(&i, -1))
+      t += square (i);
+
+   Assuming that x equals 20 and y equals 50, how many times the function min is called by the above code fragment?
+
+(답) (     31     )
+
+5. Suppose we wish to write a function to evaluate a polynomial, where a polynomial of degree n is defined to have a set of coefficients a0, a1, a2, ... , an. For a value x, we evaluate the polynomial by computing
+
+   a0 + a1・x + a2・x^2 + ・・・ + an・x^n
+
+This evaluation can be implemented by the following function, having as arguments an array of coefficients a, a value x, and the polynomial degree degree (the value n in the above equation). In this function, we compute both the successive terms of the equation and the successive powers of x within a single loop:
+
+   double poly(double a[], double x, long degree)
+   {
+      long i;
+      double result= a[0];
+      double xpwr = x; /* Equals x^i at start of loop */
+      for (i = 1; i <= degree; i++) {
+         result += a[i] * xpwr;
+         xpwr = x * xpwr;
+      }
+      return result;
+   }
+
+For degree 10, how many multiplications does this code perform?
+(답) (     20     )
+
+#

@@ -1,0 +1,95 @@
+SP Quiz-04 (Chap.3-1~3)
+다음 퀴즈 문항에 각각 답하시오.
+
+1. The program counter, which uses register ( %rip ) in x86-64, indicates the address in memory of the next instruction to be executed.
+
+2. The format and behavior of a machine-level program is defined by the ( instruction set architecture ), defining the processor state, the format of the instructions, and the effect each of these instructions will have on the state.
+
+3. For the following line of assembly code, determine the appropriate instruction based on the operands provided.
+
+   ( movw ) %dx, (%rsp,%rdx,8)
+
+4. Suppose register %rbx holds value y and %rdx holds value x. Show the formula indicating the value that will be stored in register %rax for the following assembly instruction.
+
+   leaq 12(%rbx,%rdx,2), %rax
+
+(답) 2x + y + 12
+
+5. Consider the following function decode4.
+
+short decode4(short x, short y, short z) {
+   short t = (                         );
+   return t;
+}
+
+which is compiled into assembly code, yielding the following:
+
+decode4:
+   leaq (%rsi,%rsi,4), %rbx
+   leaq (%rbx,%rdx), %rbx
+   leaq (%rbx,%rdi,2), %rbx
+   ret
+
+Fill in the missing C expression of decode4.
+
+(답) 2x + 5y + z
+
+#
+
+SP Quiz-05 (Chap.3-4~5)
+다음 퀴즈 문항에 각각 답하시오.
+
+1. The following function foo1,
+
+   int foo1(data_t x, data_t y) {
+      return x COMP y;
+   }
+
+shows a general comparison between arguments x and y, where data_t is defined (via typedef) to be one of the integer data types and either signed or unsigned. The comparison COMP is defined via #define. For the following instruction sequence, determine which data type data_t and which comparison COMP could cause the compiler to generate this code.
+
+   cmpb %sil, %dil
+   setae %al
+
+(답) data_t: unsigned char; COMP: >=
+
+2. There are several different encodings for jumps, while most commonly used ones are ( PC-relative ). They encode the difference between the address of the target instruction and the address of the instruction immediately following the jump.
+
+3. The following C function foo3,
+
+   void foo3(long a, long *p) {
+      if (a && *p < a)
+         *p = a;
+   }
+
+is compiled into the following assembly code.
+
+   foo3:
+      (                    )
+      je .L1
+      cmpq (%rsi), %rdi
+      jle .L1
+      movq %rdi, (%rsi)
+   .L1:
+      rep; ret
+
+What is the missing instruction in foo3?
+
+(답) testq %rdi, %rdi
+
+4. The following assembly code computes n^k, where the value of n is in register %rbx and the value of k in %rcx. What is the missing instruction?
+
+   factorial4:
+      movl $1, %eax
+   .L4
+      imulq %rbx, %rax
+      decq %rcx
+      cmpq $1, %rcx
+      (                    )
+      rep; ret
+
+(답) jge .L4
+
+5. Which of the following registers is callee-saved?
+(답) %rbx
+
+#
