@@ -77,15 +77,53 @@ router.get('/all', async (req, res, next) => {
     } catch (e) { next(e); }
   });
 
-  /* -------------------- 회원가입 -------------------- */
+/* -------------------- 회원가입 -------------------- */
 /**
  * @openapi
  * /api/users/signup:
  *   post:
  *     tags: [Users]
  *     summary: 회원가입
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, gender, userid, password, country, language, nationality, age, interestTag]
+ *             properties:
+ *               name:         { type: string,  example: "윤지" }
+ *               gender:       { type: integer, enum: [0,1], example: 1 }   # 0: 남자, 1: 여자
+ *               userid:       { type: string,  example: "yunji2002" }
+ *               password:     { type: string,  format: password, example: "pw1234!" }
+ *               country:      { type: string,  example: "Korea" }
+ *               language:     { type: string,  example: "Korean" }
+ *               nationality:  { type: string,  example: "Korean" }
+ *               age:          { type: integer, example: 23 }
+ *               interestTag:  { type: string,  example: "#festival,#food" }
+ *           examples:
+ *             기본:
+ *               summary: 기본 회원가입 예시
+ *               value:
+ *                 name: "윤지"
+ *                 gender: 1
+ *                 userid: "yunji2002"
+ *                 password: "pw1234!"
+ *                 country: "Korea"
+ *                 language: "Korean"
+ *                 age: 23
+ *                 interestTag: "#festival,#food"
+ *     responses:
+ *       201:
+ *         description: 가입 성공
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       409: { description: 이미 존재하는 userid }
+ *       400: { description: 유효성 오류 }
  */
-  
+
  
 router.post('/signup', async (req, res, next) => {
   try {
@@ -106,7 +144,7 @@ router.post('/signup', async (req, res, next) => {
       gender,
       country,
       language,
-      nationality,
+    
       age,
       interestTags: parseTags(interestTag),
       status: 'active',
@@ -131,8 +169,8 @@ router.post('/signup', async (req, res, next) => {
  *             type: object
  *             required: [userid, password]
  *             properties:
- *               userid:   { type: string }
- *               password: { type: string, format: password }
+ *               userid:   "yunji2002"
+ *               password: "yunjiPassword1234"
  *     responses:
  *       200:
  *         description: 로그인 성공
