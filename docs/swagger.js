@@ -21,7 +21,6 @@ module.exports = swaggerJsdoc({
             gender:     { type: 'integer', enum: [0, 1], description: '0:남 1:여' },
             country:    { type: 'string' },
             language:   { type: 'string' },
-            nationality:{ type: 'string' },
             age:        { type: 'integer' },
             interestTags:{
               type: 'array',
