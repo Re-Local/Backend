@@ -1,252 +1,126 @@
-// routes/users.js
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
-const User = require('../models/User'); // ✅ 모델 존재해야 합니다
+const bcrypt = require('bcryptjs');            // ✅ 추가
+const User = require('../models/User');
 
-/** -------------------- 유틸 -------------------- */
+// 유틸
 const pick = (obj, keys) =>
   keys.reduce((acc, k) => (obj[k] !== undefined ? (acc[k] = obj[k], acc) : acc), {});
 
-/** -------------------- 핑 -------------------- */
+const toPublicUser = (u) => {
+  if (!u) return null;
+  const { passwordHash, __v, ...rest } = u;
+  return rest;
+};
+
+const parseTags = (s) =>
+  (s || '')
+    .split(/[,#\s]+/)          // 쉼표/공백/# 구분
+    .map(t => t.trim())
+    .filter(Boolean)
+    .map(t => (t.startsWith('#') ? t : `#${t}`));
+
+/** -------------------- 회원가입 -------------------- */
 /**
  * @openapi
- * /api/users/ping:
- *   get:
+ * /api/users/signup:
+ *   post:
  *     tags: [Users]
- *     summary: Users 라우터 헬스체크
+ *     summary: 회원가입
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, gender, userid, password, country, language, age, interestTag]
+ *             properties:
+ *               name: { type: string }
+ *               gender: { type: integer, enum: [0,1] }
+ *               userid: { type: string }
+ *               password: { type: string, format: password }
+ *               country: { type: string }
+ *               language: { type: string }
+ *               nationality: { type: string }
+ *               age: { type: integer }
+ *               interestTag: { type: string, description: "예: #festival,#food" }
  *     responses:
- *       200:
- *         description: OK
+ *       201: { description: 가입 성공 }
+ *       409: { description: 이미 존재하는 userid }
+ *       400: { description: 유효성 오류 }
  */
-router.get('/ping', (req, res) => {
-  res.json({ ok: true, route: 'users' });
+router.post('/signup', async (req, res, next) => {
+  try {
+    const { name, gender, userid, password, country, language, nationality, age, interestTag } = req.body || {};
+
+    if (!userid || !password) {
+      return res.status(400).json({ error: 'userid와 password는 필수입니다.' });
+    }
+
+    const exists = await User.findOne({ userid }).lean();
+    if (exists) return res.status(409).json({ error: '이미 존재하는 userid 입니다.' });
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const user = await User.create({
+      userid,
+      passwordHash,
+      name,
+      gender,
+      country,
+      language,
+      nationality,
+      age,
+      interestTags: parseTags(interestTag),
+      status: 'active',
+    });
+
+    return res.status(201).json(toPublicUser(user.toObject()));
+  } catch (e) {
+    next(e);
+  }
 });
 
-/** -------------------- 목록 -------------------- */
+/** -------------------- 로그인 (POST 권장) -------------------- */
 /**
  * @openapi
- * /api/users:
- *   get:
+ * /api/users/login:
+ *   post:
  *     tags: [Users]
- *     summary: 사용자 목록 조회 (페이징/검색)
- *     parameters:
- *       - in: query
- *         name: page
- *         schema: { type: integer, default: 1, minimum: 1 }
- *       - in: query
- *         name: limit
- *         schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
- *       - in: query
- *         name: q
- *         schema: { type: string }
- *         description: 이름/이메일 부분검색
+ *     summary: 로그인
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [userid, password]
+ *             properties:
+ *               userid: { type: string }
+ *               password: { type: string, format: password }
  *     responses:
  *       200:
- *         description: 목록
+ *         description: 로그인 성공
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 items:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/User'
- *                 page: { type: integer }
- *                 limit: { type: integer }
- *                 total: { type: integer }
+ *                 ok: { type: boolean }
+ *                 user: { $ref: '#/components/schemas/User' }
+ *       401: { description: 불일치 }
  */
-router.get('/', async (req, res, next) => {
+router.post('/login', async (req, res, next) => {
   try {
-    const page = Math.max(parseInt(req.query.page || '1', 10), 1);
-    const limit = Math.min(Math.max(parseInt(req.query.limit || '20', 10), 1), 100);
-    const q = (req.query.q || '').trim();
-
-    const cond = { deletedAt: { $exists: false } };
-    if (q) {
-      cond.$or = [
-        { name: { $regex: q, $options: 'i' } },
-        { email: { $regex: q, $options: 'i' } },
-        { nickname: { $regex: q, $options: 'i' } },
-      ];
+    const { userid, password } = req.body || {};
+    const user = await User.findOne({ userid }).lean();
+    if (!user || !user.passwordHash) {
+      return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
     }
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
 
-    const [items, total] = await Promise.all([
-      User.find(cond).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
-      User.countDocuments(cond),
-    ]);
-
-    res.json({ items, page, limit, total });
+    return res.json({ ok: true, user: toPublicUser(user) });
   } catch (e) { next(e); }
 });
-
-/** -------------------- 생성/업서트 -------------------- */
-/**
- * @openapi
- * /api/users:
- *   post:
- *     tags: [Users]
- *     summary: 사용자 생성/업서트 (이메일 또는 소셜 provider 기준)
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email: { type: string, format: email }
- *               name: { type: string }
- *               nickname: { type: string }
- *               profileImageUrl: { type: string }
- *               provider: { type: string, enum: [kakao, google, apple] }
- *               providerUserId: { type: string }
- *     responses:
- *       201:
- *         description: 생성/업서트 결과
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
- */
-router.post('/', async (req, res, next) => {
-  try {
-    const { email, name, nickname, profileImageUrl, provider, providerUserId } = req.body;
-
-    if (!email && !(provider && providerUserId)) {
-      return res.status(400).json({ error: 'email 또는 (provider + providerUserId) 중 하나는 필요합니다.' });
-    }
-
-    const query = email
-      ? { email }
-      : { providers: { $elemMatch: { provider, providerUserId } } };
-
-    const baseSet = pick({ email, name, nickname, profileImageUrl }, ['email', 'name', 'nickname', 'profileImageUrl']);
-    const update = {
-      $setOnInsert: { role: 'user', status: 'active' },
-      $set: baseSet,
-      ...(provider && providerUserId
-        ? { $addToSet: { providers: { provider, providerUserId, connectedAt: new Date() } } }
-        : {}),
-    };
-
-    const user = await User.findOneAndUpdate(query, update, {
-      new: true,
-      upsert: true,
-      setDefaultsOnInsert: true,
-    }).lean();
-
-    res.status(201).json(user);
-  } catch (e) { next(e); }
-});
-
-/** -------------------- 단건 조회 -------------------- */
-/**
- * @openapi
- * /api/users/{id}:
- *   get:
- *     tags: [Users]
- *     summary: 사용자 단건 조회
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       200:
- *         description: OK
- *         content:
- *           application/json:
- *             schema: { $ref: '#/components/schemas/User' }
- *       404: { description: Not Found }
- */
-router.get('/:id', async (req, res, next) => {
-  try {
-    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: 'invalid id' });
-    const user = await User.findById(req.params.id).lean();
-    if (!user || user.deletedAt) return res.status(404).json({ error: 'not found' });
-    res.json(user);
-  } catch (e) { next(e); }
-});
-
-/** -------------------- 수정 -------------------- */
-/**
- * @openapi
- * /api/users/{id}:
- *   patch:
- *     tags: [Users]
- *     summary: 사용자 정보 수정
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: string }
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name: { type: string }
- *               nickname: { type: string }
- *               profileImageUrl: { type: string }
- *               locale: { type: string }
- *               timeZone: { type: string }
- *               status: { type: string, enum: [active, inactive, blocked, deleted] }
- *               region:
- *                 type: object
- *                 properties:
- *                   city: { type: string }
- *                   district: { type: string }
- *     responses:
- *       200:
- *         description: OK
- *       404:
- *         description: Not Found
- */
-router.patch('/:id', async (req, res, next) => {
-  try {
-    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: 'invalid id' });
-
-    const allowed = ['name', 'nickname', 'profileImageUrl', 'locale', 'timeZone', 'status', 'region'];
-    const update = pick(req.body || {}, allowed);
-
-    const user = await User.findByIdAndUpdate(req.params.id, update, { new: true }).lean();
-    if (!user) return res.status(404).json({ error: 'not found' });
-    res.json(user);
-  } catch (e) { next(e); }
-});
-
-/** -------------------- 삭제(소프트) -------------------- */
-/**
- * @openapi
- * /api/users/{id}:
- *   delete:
- *     tags: [Users]
- *     summary: 사용자 소프트 삭제
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       204: { description: No Content }
- *       404: { description: Not Found }
- */
-router.delete('/:id', async (req, res, next) => {
-  try {
-    if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ error: 'invalid id' });
-
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { status: 'deleted', deletedAt: new Date() },
-      { new: true }
-    ).lean();
-
-    if (!user) return res.status(404).json({ error: 'not found' });
-    return res.status(204).send();
-  } catch (e) { next(e); }
-});
-
-module.exports = router;
