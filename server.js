@@ -1,54 +1,66 @@
 // server.js
 require('dotenv').config();
 
+const express = require('express');
+const cors = require('cors');
+const morgan = require('morgan');
+const mongoose = require('mongoose');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./docs/swagger');
+const usersRouter = require('./routes/users');
+const transcribeRouter = require('./routes/transcribe');
+
+const app = express();
+const PORT = process.env.PORT || 4000;
+
+// 디버그용: 개발환경에서만 키 노출 여부 출력
+if (process.env.NODE_ENV !== 'production') {
+  console.log('🔑 GROQ_API_KEY set:', !!process.env.GROQ_API_KEY);
+}
+
+// 필수 환경변수 체크
 if (!process.env.MONGODB_URI) {
   console.error('❌ Missing MONGODB_URI in .env');
   process.exit(1);
 }
 
+// 미들웨어
+app.use(cors({
+  origin: process.env.CLIENT_ORIGIN?.split(',') || 'http://localhost:3000',
+  credentials: true,
+}));
+app.use(express.json({ limit: '2mb' })); // 필요시 조절
+app.use(morgan('dev'));
 
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
-const mongoose = require('mongoose');
+// (선택) 요청 타임아웃
+app.use((req, res, next) => {
+  req.setTimeout(60_000); // 60s
+  next();
+});
 
-const app = express();
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./docs/swagger');
-
-
+// Swagger
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 app.get('/docs.json', (_, res) => res.json(swaggerSpec));
 
-
-// 미들웨어
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000', credentials: true }));
-app.use(express.json());
-app.use(morgan('dev'));
-
+// 헬스체크
 app.get('/health', (_, res) => res.json({ ok: true }));
 
-// ⬇️ 라우터 import
-const usersRouter = require('./routes/users');
-console.log('usersRouter type:', typeof usersRouter);
-
-//const favoritesRouter = require('./routes/favorites');
-//const notificationsRouter = require('./routes/notifications');
-
-// ⬇️ 타입 확인(디버그용) — 첫 실행에 한 번 확인
-console.log('usersRouter type:', typeof usersRouter);
-// ⬇️ 연결
+// 라우트
 app.use('/api/users', usersRouter);
-
-const transcribeRouter = require('./routes/transcribe');
-console.log('transcribe: ', typeof transcribeRouter);
 app.use('/api/transcribe', transcribeRouter);
 
-//app.use('/api/favorites', favoritesRouter);
-//app.use('/api/notifications', notificationsRouter);
+// 404 핸들러
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found', path: req.originalUrl });
+});
+
+// 에러 핸들러
+app.use((err, req, res, _next) => {
+  console.error('Unhandled Error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
 
 // DB & 서버 시작
-const PORT = process.env.PORT || 4000;
 mongoose.connect(process.env.MONGODB_URI, { dbName: 're_local' })
   .then(() => {
     console.log('✅ MongoDB connected');
