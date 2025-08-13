@@ -16,6 +16,7 @@ const app = express();
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./docs/swagger');
 
+
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 app.get('/docs.json', (_, res) => res.json(swaggerSpec));
 
@@ -36,9 +37,13 @@ console.log('usersRouter type:', typeof usersRouter);
 
 // ⬇️ 타입 확인(디버그용) — 첫 실행에 한 번 확인
 console.log('usersRouter type:', typeof usersRouter);
-
 // ⬇️ 연결
 app.use('/api/users', usersRouter);
+
+const transcribeRouter = require('./routes/transcribe');
+console.log('transcribe: ', typeof transcribeRouter);
+app.use('/api/transcribe', transcribeRouter);
+
 //app.use('/api/favorites', favoritesRouter);
 //app.use('/api/notifications', notificationsRouter);
 
