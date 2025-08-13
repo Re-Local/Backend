@@ -134,5 +134,77 @@ router.post('/tt', async (req, res) => {
     return res.status(500).json({ error: '번역 실패', detail: err.response?.data || err.message });
   }
 });
+const detectLang = (t='') => (/[가-힣]/.test(t) ? 'ko' : 'en');
+
+/**
+ * @swagger
+ * /api/tts/auto:
+ *   post:
+ *     summary: 텍스트를 언어에 맞춰 자동 TTS (en=Groq, ko=Google)
+ *     tags: [Transcribe]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [text]
+ *             properties:
+ *               text:   { type: string, example: "혜화에 오신 걸 환영합니다!" }
+ *               voice:  { type: string, example: "Aria-PlayAI", description: "영어일 때만 적용 (Groq 보이스)" }
+ *               format: { type: string, enum: [mp3,wav], example: "mp3" }
+ *     responses:
+ *       200:
+ *         description: 오디오 스트림
+ *         content:
+ *           audio/mpeg: { schema: { type: string, format: binary } }
+ *           audio/wav:  { schema: { type: string, format: binary } }
+ */
+router.post('/auto', async (req, res) => {
+  try {
+    const { text, voice = 'Aria-PlayAI', format = 'mp3' } = req.body || {};
+    if (!text) return res.status(400).json({ error: 'text is required' });
+
+    const lang = detectLang(text);
+
+    if (lang === 'en') {
+      // ▶︎ 영어: Groq PlayAI TTS
+      const audioResp = await groq.audio.speech.create({
+        model: 'playai-tts',
+        voice,
+        input: text,
+        response_format: format === 'wav' ? 'wav' : 'mp3',
+      });
+      const buf = Buffer.from(await audioResp.arrayBuffer());
+      if (format === 'wav') {
+        res.set('Content-Type', 'audio/wav');
+        res.set('Content-Disposition', 'inline; filename="speech.wav"');
+      } else {
+        res.set('Content-Type', 'audio/mpeg');
+        res.set('Content-Disposition', 'inline; filename="speech.mp3"');
+      }
+      return res.send(buf);
+    } else {
+      // ▶︎ 한국어: Google Cloud TTS
+      const [resp] = await gtts.synthesizeSpeech({
+        input: { text },
+        voice: { languageCode: 'ko-KR', ssmlGender: 'NEUTRAL' }, // 원하면 'ko-KR-Standard-A' 등 보이스 지정
+        audioConfig: { audioEncoding: format === 'wav' ? 'LINEAR16' : 'MP3' },
+      });
+      const buf = Buffer.from(resp.audioContent, 'base64');
+      if (format === 'wav') {
+        res.set('Content-Type', 'audio/wav');
+        res.set('Content-Disposition', 'inline; filename="speech.wav"');
+      } else {
+        res.set('Content-Type', 'audio/mpeg');
+        res.set('Content-Disposition', 'inline; filename="speech.mp3"');
+      }
+      return res.send(buf);
+    }
+  } catch (err) {
+    console.error('TTS Auto Error:', err?.response?.data || err?.message || err);
+    res.status(500).json({ error: 'TTS 실패', detail: err?.response?.data || err?.message || String(err) });
+  }
+});
 
 module.exports = router;
