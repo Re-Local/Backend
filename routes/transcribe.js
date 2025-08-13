@@ -166,7 +166,7 @@ const detectLang = (t='') => (/[가-힣]/.test(t) ? 'ko' : 'en');
 
 /**
  * @swagger
- * /api/tts/auto:
+ * /api/transcribe/tts:
  *   post:
  *     summary: 텍스트를 언어에 맞춰 자동 TTS (en=Groq, ko=Google)
  *     tags: [Transcribe]
