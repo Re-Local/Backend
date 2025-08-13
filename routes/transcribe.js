@@ -5,6 +5,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const Groq = require('groq-sdk');
+const axios = require('axios');
 
 // 업로드 디렉토리 보장
 const uploadDir = path.join(__dirname, '../uploads');
@@ -79,6 +80,58 @@ router.post('/stt', upload.single('audio'), async (req, res) => {
       error: 'STT 실패',
       detail: err?.response?.data || err?.message || String(err),
     });
+  }
+});
+
+/**
+ * @swagger
+ * /api/transcribe/tt:
+ *   post:
+ *     summary: 텍스트 번역 (Groq LLM)
+ *     tags: [Transcribe]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [text, target]
+ *             properties:
+ *               text:   { type: string, example: "안녕 만나서 반가워" }
+ *               source: { type: string, example: "ko", description: "원문 언어 (선택)" }
+ *               target: { type: string, example: "en", description: "목표 언어" }
+ *     responses:
+ *       200: { description: OK }
+ */
+router.post('/tt', async (req, res) => {
+  const { text, source, target } = req.body || {};
+  if (!text || !target) return res.status(400).json({ error: 'text, target은 필수입니다.' });
+
+  try {
+    const r = await axios.post(
+      'https://api.groq.com/openai/v1/chat/completions',
+      {
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.2,
+        messages: [
+          {
+            role: 'system',
+            content:
+              `You are a professional translator. Translate the user's text` +
+              (source ? ` from ${source}` : '') +
+              ` to ${target}. Preserve meaning and tone. Return only the translated sentence.`,
+          },
+          { role: 'user', content: text },
+        ],
+      },
+      { headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` } }
+    );
+
+    const out = r.data?.choices?.[0]?.message?.content?.trim() || '';
+    return res.json({ text: out });
+  } catch (err) {
+    console.error('Translate Error:', err.response?.data || err.message);
+    return res.status(500).json({ error: '번역 실패', detail: err.response?.data || err.message });
   }
 });
 
