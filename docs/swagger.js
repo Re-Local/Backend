@@ -48,7 +48,8 @@ module.exports = swaggerJsdoc({
     },
     tags: [
       { name: 'Users', description: '회원 관련 API' },
-      { name: 'Movies', description: '영화 검색 API' }
+      { name: 'Movies', description: '영화 검색 API' },
+      { name: 'Transcribe', description: '번역, 통역 API'},
     ]
   },
   apis: ['./routes/*.js'],
