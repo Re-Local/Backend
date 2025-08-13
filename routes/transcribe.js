@@ -82,7 +82,15 @@ router.post('/stt', upload.single('audio'), async (req, res) => {
     });
   }
 });
+const AWS = require('aws-sdk');
+// AWS 설정 추가
+AWS.config.update({
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION || 'ap-northeast-2',
+});
 
+const awsTranslate = new AWS.Translate();
 /**
  * @swagger
  * /api/transcribe/tt:
@@ -104,10 +112,11 @@ router.post('/stt', upload.single('audio'), async (req, res) => {
  *       200: { description: OK }
  */
 router.post('/tt', async (req, res) => {
-  const { text, source, target } = req.body || {};
+  const { text, source = 'en', target } = req.body || {};
   if (!text || !target) return res.status(400).json({ error: 'text, target은 필수입니다.' });
 
   try {
+    // 1차 시도: Groq 번역
     const r = await axios.post(
       'https://api.groq.com/openai/v1/chat/completions',
       {
@@ -117,9 +126,9 @@ router.post('/tt', async (req, res) => {
           {
             role: 'system',
             content:
-              `You are a professional translator. Translate the user's text` +
+              `You are a professional translator. Translate everything the user says and return only the translated sentence` +
               (source ? ` from ${source}` : '') +
-              ` to ${target}. Preserve meaning and tone. Return only the translated sentence.`,
+              ` to ${target}. Preserve meaning and tone. Respond ONLY with the translated sentence. Do not explain.`,
           },
           { role: 'user', content: text },
         ],
@@ -127,13 +136,32 @@ router.post('/tt', async (req, res) => {
       { headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` } }
     );
 
-    const out = r.data?.choices?.[0]?.message?.content?.trim() || '';
+    let out = r.data?.choices?.[0]?.message?.content?.trim() || '';
+    out = out.replace(/^["“”']+|["“”']+$/g, '');
+
+    // Groq 응답이 이상할 경우 fallback
+    if (!out || out === ', .') {
+      console.warn('⚠️ Groq 응답이 비정상 → AWS로 fallback 시도');
+
+      const awsResult = await awsTranslate.translateText({
+        Text: text,
+        SourceLanguageCode: source,
+        TargetLanguageCode: target,
+      }).promise();
+
+      return res.json({ text: awsResult.TranslatedText });
+    }
+
+    // 정상 번역 결과 반환
     return res.json({ text: out });
+
   } catch (err) {
-    console.error('Translate Error:', err.response?.data || err.message);
-    return res.status(500).json({ error: '번역 실패', detail: err.response?.data || err.message });
+    console.error('번역 실패:', err?.response?.data || err?.message || err);
+    return res.status(500).json({ error: '번역 실패', detail: err?.response?.data || err?.message });
   }
 });
+
+
 const detectLang = (t='') => (/[가-힣]/.test(t) ? 'ko' : 'en');
 
 /**
