@@ -7,11 +7,10 @@ const path = require('path');
 const Groq = require('groq-sdk');
 const axios = require('axios');
 
-// 업로드 디렉토리 보장
+/* ───────────────────────── 공용 준비 ───────────────────────── */
 const uploadDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-// multer: 원본 확장자 보존
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),
   filename: (_req, file, cb) => {
@@ -21,14 +20,36 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Groq SDK 클라이언트
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+const ALLOWED_EXT = ['.flac','.mp3','.mp4','.mpeg','.mpga','.m4a','.ogg','.opus','.wav','.webm'];
+const isKorean = (t='') => /[가-힣]/.test(t);
+
+/* (선택) AWS Translate fallback 지원 */
+let awsTranslate = null;
+try {
+  const AWS = require('aws-sdk');
+  AWS.config.update({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION || 'ap-northeast-2',
+  });
+  awsTranslate = new AWS.Translate();
+} catch { /* 패키지 없으면 무시 */ }
+
+/* (선택) Google TTS(ko용) — 없으면 영어만 TTS */
+let gtts = null;
+try {
+  const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
+  gtts = new TextToSpeechClient();
+} catch { /* 패키지 없으면 무시 */ }
+
+/* ───────────────────────── STT ───────────────────────── */
 /**
  * @swagger
  * /api/transcribe/stt:
  *   post:
- *     summary: 오디오 파일을 업로드하여 텍스트로 변환 (STT)
+ *     summary: 오디오 → 텍스트 (Groq Whisper)
  *     tags: [Transcribe]
  *     requestBody:
  *       required: true
@@ -40,39 +61,27 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
  *               audio:
  *                 type: string
  *                 format: binary
- *                 description: 업로드할 음성 파일 (mp3, wav, m4a 등)
  *     responses:
- *       200:
- *         description: 변환된 텍스트
- *       400:
- *         description: 잘못된 요청 (파일/포맷/키 누락)
- *       500:
- *         description: 서버 오류
+ *       200: { description: OK }
  */
 router.post('/stt', upload.single('audio'), async (req, res) => {
   const filePath = req.file?.path;
   if (!filePath) return res.status(400).json({ error: 'audio 파일이 필요합니다.' });
   if (!process.env.GROQ_API_KEY) return res.status(400).json({ error: 'GROQ_API_KEY가 설정되지 않았습니다.' });
 
-  // (선택) 확장자 가드
-  const allowed = ['.flac','.mp3','.mp4','.mpeg','.mpga','.m4a','.ogg','.opus','.wav','.webm'];
   const ext = (path.extname(req.file.originalname) || '').toLowerCase();
-  if (!allowed.includes(ext)) {
+  if (!ALLOWED_EXT.includes(ext)) {
     try { fs.unlinkSync(filePath); } catch {}
     return res.status(400).json({ error: `지원되지 않는 형식입니다: ${ext}` });
   }
 
   try {
-    // ⬇️ 핵심: SDK에는 "그냥 ReadStream"만 넘긴다
     const result = await groq.audio.transcriptions.create({
       model: 'whisper-large-v3-turbo',
       file: fs.createReadStream(filePath),
-      // language: 'ko',          // 필요 시 힌트
-      // response_format: 'json', // 필요 시 지정
     });
-
     try { fs.unlinkSync(filePath); } catch {}
-    return res.json(result); // result.text 포함
+    return res.json(result); // { text: "...", ... }
   } catch (err) {
     console.error('STT Error:', err?.response?.data || err?.message || err);
     try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch {}
@@ -82,20 +91,13 @@ router.post('/stt', upload.single('audio'), async (req, res) => {
     });
   }
 });
-const AWS = require('aws-sdk');
-// AWS 설정 추가
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION || 'ap-northeast-2',
-});
 
-const awsTranslate = new AWS.Translate();
+/* ───────────────────────── TT(번역) ───────────────────────── */
 /**
  * @swagger
  * /api/transcribe/tt:
  *   post:
- *     summary: 텍스트 번역 (Groq LLM)
+ *     summary: 텍스트 번역 (Groq Llama, AWS fallback)
  *     tags: [Transcribe]
  *     requestBody:
  *       required: true
@@ -106,17 +108,16 @@ const awsTranslate = new AWS.Translate();
  *             required: [text, target]
  *             properties:
  *               text:   { type: string, example: "안녕 만나서 반가워" }
- *               source: { type: string, example: "ko", description: "원문 언어 (선택)" }
- *               target: { type: string, example: "en", description: "목표 언어" }
+ *               source: { type: string, example: "ko" }
+ *               target: { type: string, example: "en" }
  *     responses:
  *       200: { description: OK }
  */
 router.post('/tt', async (req, res) => {
-  const { text, source = 'en', target } = req.body || {};
+  const { text, source, target } = req.body || {};
   if (!text || !target) return res.status(400).json({ error: 'text, target은 필수입니다.' });
 
   try {
-    // 1차 시도: Groq 번역
     const r = await axios.post(
       'https://api.groq.com/openai/v1/chat/completions',
       {
@@ -126,49 +127,36 @@ router.post('/tt', async (req, res) => {
           {
             role: 'system',
             content:
-              `You are a professional translator. Translate everything the user says and return only the translated sentence` +
+              `You are a professional translator. Translate the user's text` +
               (source ? ` from ${source}` : '') +
-              ` to ${target}. Preserve meaning and tone. Respond ONLY with the translated sentence. Do not explain.`,
+              ` to ${target}. Return only the translated sentence.`,
           },
           { role: 'user', content: text },
         ],
       },
       { headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` } }
     );
-
     let out = r.data?.choices?.[0]?.message?.content?.trim() || '';
     out = out.replace(/^["“”']+|["“”']+$/g, '');
-
-    // Groq 응답이 이상할 경우 fallback
-    if (!out || out === ', .') {
-      console.warn('⚠️ Groq 응답이 비정상 → AWS로 fallback 시도');
-
-      const awsResult = await awsTranslate.translateText({
-        Text: text,
-        SourceLanguageCode: source,
-        TargetLanguageCode: target,
+    if (!out && awsTranslate) {
+      const aws = await awsTranslate.translateText({
+        Text: text, SourceLanguageCode: source || 'auto', TargetLanguageCode: target,
       }).promise();
-
-      return res.json({ text: awsResult.TranslatedText });
+      return res.json({ text: aws.TranslatedText });
     }
-
-    // 정상 번역 결과 반환
-    return res.json({ text: out });
-
+    return res.json({ text: out || text });
   } catch (err) {
-    console.error('번역 실패:', err?.response?.data || err?.message || err);
-    return res.status(500).json({ error: '번역 실패', detail: err?.response?.data || err?.message });
+    console.error('TT Error:', err?.response?.data || err?.message || err);
+    return res.status(500).json({ error: '번역 실패', detail: err?.response?.data || err?.message || String(err) });
   }
 });
 
-
-const detectLang = (t='') => (/[가-힣]/.test(t) ? 'ko' : 'en');
-
+/* ───────────────────────── TTS ───────────────────────── */
 /**
  * @swagger
  * /api/transcribe/tts:
  *   post:
- *     summary: 텍스트를 언어에 맞춰 자동 TTS (en=Groq, ko=Google)
+ *     summary: 텍스트 → 음성 (Groq PlayAI TTS: 영어/아랍어 자동 스위칭)
  *     tags: [Transcribe]
  *     requestBody:
  *       required: true
@@ -178,9 +166,12 @@ const detectLang = (t='') => (/[가-힣]/.test(t) ? 'ko' : 'en');
  *             type: object
  *             required: [text]
  *             properties:
- *               text:   { type: string, example: "혜화에 오신 걸 환영합니다!" }
- *               voice:  { type: string, example: "Aria-PlayAI", description: "영어일 때만 적용 (Groq 보이스)" }
- *               format: { type: string, enum: [mp3,wav], example: "mp3" }
+ *               text:   { type: string, example: "مرحباً بكم في حي الجامعة!" }
+ *               // model을 직접 지정 가능 (playai-tts | playai-tts-arabic)
+ *               model:  { type: string, example: "playai-tts-arabic" }
+ *               // 보이스 이름 (모델별 상이)
+ *               voice:  { type: string, example: "Amira-PlayAI" }
+ *               format: { type: string, enum: [mp3, wav], example: "mp3" }
  *     responses:
  *       200:
  *         description: 오디오 스트림
@@ -188,51 +179,66 @@ const detectLang = (t='') => (/[가-힣]/.test(t) ? 'ko' : 'en');
  *           audio/mpeg: { schema: { type: string, format: binary } }
  *           audio/wav:  { schema: { type: string, format: binary } }
  */
-router.post('/auto', async (req, res) => {
+// 언어 감지
+const hasKorean = (text) => /[가-힣]/.test(text);
+
+// 영어/아랍어 보이스 목록
+const VOICES = {
+  'playai-tts': ['Aria-PlayAI', 'Orion-PlayAI', 'Celeste-PlayAI'], // 영어
+  'playai-tts-arabic': ['Amira-PlayAI', 'Ahmad-PlayAI'] // 아랍어
+};
+
+router.post('/tts', async (req, res) => {
   try {
-    const { text, voice = 'Aria-PlayAI', format = 'mp3' } = req.body || {};
+    const { text, model, voice, format = 'mp3' } = req.body || {};
     if (!text) return res.status(400).json({ error: 'text is required' });
 
-    const lang = detectLang(text);
+    let
+    // 1) 간단 언어 감지 (아랍어 유니코드 블록)
+    const hasArabic = /[\u0600-\u06FF]/.test(text);
 
-    if (lang === 'en') {
-      // ▶︎ 영어: Groq PlayAI TTS
-      const audioResp = await groq.audio.speech.create({
-        model: 'playai-tts',
-        voice,
-        input: text,
-        response_format: format === 'wav' ? 'wav' : 'mp3',
-      });
-      const buf = Buffer.from(await audioResp.arrayBuffer());
-      if (format === 'wav') {
-        res.set('Content-Type', 'audio/wav');
-        res.set('Content-Disposition', 'inline; filename="speech.wav"');
-      } else {
-        res.set('Content-Type', 'audio/mpeg');
-        res.set('Content-Disposition', 'inline; filename="speech.mp3"');
-      }
-      return res.send(buf);
-    } else {
-      // ▶︎ 한국어: Google Cloud TTS
-      const [resp] = await gtts.synthesizeSpeech({
-        input: { text },
-        voice: { languageCode: 'ko-KR', ssmlGender: 'NEUTRAL' }, // 원하면 'ko-KR-Standard-A' 등 보이스 지정
-        audioConfig: { audioEncoding: format === 'wav' ? 'LINEAR16' : 'MP3' },
-      });
-      const buf = Buffer.from(resp.audioContent, 'base64');
-      if (format === 'wav') {
-        res.set('Content-Type', 'audio/wav');
-        res.set('Content-Disposition', 'inline; filename="speech.wav"');
-      } else {
-        res.set('Content-Type', 'audio/mpeg');
-        res.set('Content-Disposition', 'inline; filename="speech.mp3"');
-      }
-      return res.send(buf);
-    }
+    // 2) 사용할 모델 결정 (우선순위: 클라이언트 지정 > 자동)
+    const chosenModel = model || (hasArabic ? 'playai-tts-arabic' : 'playai-tts');
+
+    // 3) 기본 보이스 (모델별 권장 기본값)
+    // playai-tts (영어): Groq 문서에 19개 보이스 존재. 예: Arista-PlayAI, Quinn-PlayAI 등
+    // playai-tts-arabic: Ahmad-PlayAI, Amira-PlayAI, Khalid-PlayAI, Nasser-PlayAI
+    const defaultVoice =
+      chosenModel === 'playai-tts-arabic'
+        ? 'Amira-PlayAI'
+        : 'Arista-PlayAI';
+
+    const voiceName = voice || defaultVoice;
+    const wantsWav = format === 'wav';
+
+    // 4) Groq PlayAI TTS 호출
+    const audioResp = await groq.audio.speech.create({
+      model: chosenModel,                 // 'playai-tts' | 'playai-tts-arabic'
+      voice: voiceName,                   // 모델에 맞는 보이스여야 함
+      input: text,
+      response_format: wantsWav ? 'wav' : 'mp3',
+    });
+
+    // 5) 응답 전송
+    const buf = Buffer.from(await audioResp.arrayBuffer());
+    res.set('Content-Type', wantsWav ? 'audio/wav' : 'audio/mpeg');
+    res.set('Content-Disposition', `inline; filename="speech.${wantsWav ? 'wav' : 'mp3'}"`);
+    return res.send(buf);
+
   } catch (err) {
-    console.error('TTS Auto Error:', err?.response?.data || err?.message || err);
-    res.status(500).json({ error: 'TTS 실패', detail: err?.response?.data || err?.message || String(err) });
+    // 약관 미동의시 안내
+    const detail = err?.response?.data || err?.message || String(err);
+    if (typeof detail === 'string' && detail.includes('model_terms_required')) {
+      return res.status(400).json({
+        error: 'TTS 실패',
+        detail: '해당 TTS 모델 약관 동의 필요. 콘솔에서 한 번만 동의하세요.',
+        howTo: 'https://console.groq.com/playground?model=playai-tts 또는 playai-tts-arabic',
+      });
+    }
+    console.error('TTS Error:', detail);
+    return res.status(500).json({ error: 'TTS 실패', detail });
   }
 });
+
 
 module.exports = router;

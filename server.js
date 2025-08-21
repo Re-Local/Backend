@@ -9,6 +9,7 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./docs/swagger');
 const usersRouter = require('./routes/users');
 const transcribeRouter = require('./routes/transcribe');
+const moviesRouter = require('./routes/movies');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -48,6 +49,7 @@ app.get('/health', (_, res) => res.json({ ok: true }));
 // 라우트
 app.use('/api/users', usersRouter);
 app.use('/api/transcribe', transcribeRouter);
+app.use('/api/movies', moviesRouter);
 
 // 404 핸들러
 app.use((req, res) => {
