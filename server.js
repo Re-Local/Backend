@@ -48,7 +48,7 @@ app.get('/health', (_, res) => res.json({ ok: true }));
 
 // 라우트
 app.use('/api/users', usersRouter);
-app.use('/api/transcribe', transcribeRouter);
+app.use('/api/transcribe', transcribeRoutes);
 app.use('/api/movies', moviesRouter);
 
 // 404 핸들러
