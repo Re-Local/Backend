@@ -50,7 +50,7 @@ const parseTags = (raw) => {
  *                       userid:      { type: string }
  *                       country:     { type: string }
  *                       language:    { type: string }
- *                       nationality: { type: string }
+ *                      
  *                       age:         { type: integer }
  *                       interestTag: { type: string, description: "#festival,#food" }
  *                 total: { type: integer }
@@ -66,7 +66,7 @@ router.get('/all', async (req, res, next) => {
         userid:      u.userid,
         country:     u.country ?? '',
         language:    u.language ?? '',
-        nationality: u.nationality ?? '',
+
         age:         typeof u.age === 'number' ? u.age : null,
         // 배열로 저장된 interestTags를 요청 형식에 맞춰 문자열로 변환
         interestTag: Array.isArray(u.interestTags) ? u.interestTags.join(',') : (u.interestTag || ''),
@@ -90,7 +90,7 @@ router.get('/all', async (req, res, next) => {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, gender, userid, password, country, language, nationality, age, interestTag]
+ *             required: [name, gender, userid, password, country, language, age, interestTag]
  *             properties:
  *               name:         { type: string,  example: "윤지" }
  *               gender:       { type: integer, enum: [0,1], example: 1 }   # 0: 남자, 1: 여자
@@ -98,7 +98,7 @@ router.get('/all', async (req, res, next) => {
  *               password:     { type: string,  format: password, example: "pw1234!" }
  *               country:      { type: string,  example: "Korea" }
  *               language:     { type: string,  example: "Korean" }
- *               nationality:  { type: string,  example: "Korean" }
+ *               
  *               age:          { type: integer, example: 23 }
  *               interestTag:  { type: string,  example: "#festival,#food" }
  *           examples:
@@ -127,7 +127,7 @@ router.get('/all', async (req, res, next) => {
  
 router.post('/signup', async (req, res, next) => {
   try {
-    const { name, gender, userid, password, country, language, nationality, age, interestTag } = req.body || {};
+    const { name, gender, userid, password, country, language, age, interestTag } = req.body || {};
 
     if (!userid || !password) return res.status(400).json({ error: 'userid와 password는 필수입니다.' });
     if (!(gender === 0 || gender === 1)) return res.status(400).json({ error: 'gender는 0 또는 1이어야 합니다.' });

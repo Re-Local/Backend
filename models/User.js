@@ -7,12 +7,12 @@ const UserSchema = new mongoose.Schema({
   name: String,
   gender: { type: Number, enum: [0, 1] },                             // 0 남 1 여
   country: String,
-  language: String,
-  nationality: String,                                                // 선택
+  language: String,                                              // 선택
   age: Number,
   interestTags: [{ type: String }],                                   // ['#festival','#food']
   // 기존 필드(email, providers, nickname 등 있으면 그대로 두세요)
-  email: String,
+  email: { type: String, unique: true, sparse: true },
+
   nickname: String,
   profileImageUrl: String,
   providers: [{
