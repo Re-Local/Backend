@@ -42,7 +42,7 @@ const upload = multer({ storage });
 router.post('/stt', upload.single('audio'), async (req, res) => {
   console.log('req.file:', req.file);
   console.log('req.body:', req.body);
-  
+
   const filePath = req.file?.path;
   if (!filePath) return res.status(400).json({ error: '파일이 없습니다.' });
 
@@ -58,6 +58,64 @@ router.post('/stt', upload.single('audio'), async (req, res) => {
     res.status(500).json({ error: 'STT 실패', detail: err.message });
   } finally {
     if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
+});
+
+/**
+ * @openapi
+ * /api/transcribe/tt:
+ *   post:
+ *     summary: "텍스트 번역 (TT)"
+ *     tags: [Transcribe]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               text:
+ *                 type: string
+ *                 example: "안녕하세요"
+ *               targetLang:
+ *                 type: string
+ *                 example: "en"
+ *     responses:
+ *       200:
+ *         description: 번역된 텍스트 반환
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 translated:
+ *                   type: string
+ *                   example: "Hello"
+ */
+
+
+
+// 📄 routes/transcribe.js 안에 추가 (또는 분리해서 써도 됨)
+router.post('/tt', async (req, res) => {
+  const { text, targetLang = 'en' } = req.body;
+
+  if (!text) {
+    return res.status(400).json({ error: 'text는 필수입니다.' });
+  }
+
+  try {
+    const prompt = `다음 문장을 ${targetLang}로 번역해줘:\n"${text}"`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const translated = completion.choices[0].message.content;
+    res.json({ translated });
+  } catch (err) {
+    console.error('TT Error:', err);
+    res.status(500).json({ error: 'TT 실패', detail: err.message });
   }
 });
 
