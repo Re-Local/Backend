@@ -73,7 +73,8 @@ router.post('/stt', upload.single('audio'), async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
- *         description: "업로드된 음성 파일 이름 (예: 1692603423.mp3)"
+ *         description: "업로드된 음성 파일 이름입니다. 쿼리 파라미터로 사용하세요 (예: /sts?filename=1692603423.mp3)"
+
  *     responses:
  *       200:
  *         description: "번역된 음성 mp3 반환"
