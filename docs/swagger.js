@@ -1,4 +1,4 @@
-// swagger.js
+const path = require('path');
 const swaggerJsdoc = require('swagger-jsdoc');
 
 module.exports = swaggerJsdoc({
@@ -13,6 +13,7 @@ module.exports = swaggerJsdoc({
         url: process.env.SWAGGER_SERVER_URL || 'http://localhost:4000',
       },
     ],
+
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -75,10 +76,10 @@ module.exports = swaggerJsdoc({
     },
     tags: [
       { name: 'Users', description: '회원 관련 API' },
-      { name: 'Movies', description: '영화 검색 (KOBIS)' },
-      { name: 'Plays', description: '연극 상영 정보 API' },
+      { name: 'Plays', description: '영화 검색 (KOBIS)' },
       { name: 'Transcribe', description: '번역, 통역 API' },
+
     ],
   },
-  apis: ['./routes/*.js'], // Swagger 주석이 포함된 파일 경로
+    apis: [path.join(__dirname, '../routes/*.js')],  // Swagger 주석이 포함된 파일 경로
 });
