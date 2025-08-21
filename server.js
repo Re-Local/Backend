@@ -71,3 +71,6 @@ mongoose.connect(process.env.MONGODB_URI, { dbName: 're_local' })
     app.listen(PORT, () => console.log(`🚀 http://localhost:${PORT}`));
   })
   .catch(err => { console.error(err); process.exit(1); });
+// server.js 하단
+console.log('✅ Swagger Paths:');
+console.log(Object.keys(swaggerSpec.paths));
