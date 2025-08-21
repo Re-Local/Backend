@@ -1,4 +1,3 @@
-// routes/movies.js
 const express = require('express');
 const router = express.Router();
 const Movie = require('../models/Movie');
@@ -8,26 +7,38 @@ const Movie = require('../models/Movie');
  * /api/movies:
  *   post:
  *     tags: [Movies]
- *     summary: 연극 정보 등록
+ *     summary: 연극/뮤지컬 등록
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: [theaterName, title, date, time, price, lat, lng, address]
+ *             required:
+ *               - title
+ *               - category
+ *               - location
+ *               - start_date
+ *               - end_date
+ *               - image
+ *               - price
+ *               - duration
+ *               - lat
+ *               - lng
  *             properties:
- *               theaterName: { type: string, example: "홍대 소극장" }
- *               title:       { type: string, example: "로미오와 줄리엣" }
- *               date:        { type: string, example: "2025-09-01" }
- *               time:        { type: string, example: "19:00" }
- *               price:       { type: number, example: 15000 }
+ *               title:       { type: string, example: "헤드윅" }
+ *               category:    { type: string, enum: ["romance", "comedy", "horror", "tragedy", "thriller", "musical"], example: "musical" }
+ *               location:    { type: string, example: "서울시 마포구 와이산로 355" }
+ *               start_date:  { type: string, example: "2025-08-10" }
+ *               end_date:    { type: string, example: "2025-08-25" }
+ *               image:       { type: string, example: "/images/musical.jpg" }
+ *               price:       { type: number, example: 20000 }
+ *               duration:    { type: number, example: 200 }
  *               lat:         { type: number, example: 37.555 }
  *               lng:         { type: number, example: 126.923 }
- *               address:     { type: string, example: "서울특별시 마포구 어쩌구로 123" }
  *     responses:
  *       201:
- *         description: 연극 등록 성공
+ *         description: 공연 등록 성공
  */
 router.post('/', async (req, res, next) => {
   try {
@@ -43,10 +54,34 @@ router.post('/', async (req, res, next) => {
  * /api/movies:
  *   get:
  *     tags: [Movies]
- *     summary: 모든 연극 정보 조회
+ *     summary: 공연 목록 조회
  *     responses:
  *       200:
  *         description: OK
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       movie_id:    { type: number, example: 1 }
+ *                       title:       { type: string, example: "헤드윅" }
+ *                       category:    { type: string, example: "musical" }
+ *                       location:    { type: string, example: "서울시 마포구 와이산로 355" }
+ *                       start_date:  { type: string, example: "2025-08-10" }
+ *                       end_date:    { type: string, example: "2025-08-25" }
+ *                       image:       { type: string, example: "/images/musical.jpg" }
+ *                       price:       { type: number, example: 20000 }
+ *                       duration:    { type: number, example: 200 }
+ *                       lat:         { type: number, example: 37.555 }
+ *                       lng:         { type: number, example: 126.923 }
+ *                       createdAt:   { type: string, format: 'date-time' }
+ *                       updatedAt:   { type: string, format: 'date-time' }
+ *                 total: { type: integer, example: 1 }
  */
 router.get('/', async (req, res, next) => {
   try {

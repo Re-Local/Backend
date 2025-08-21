@@ -68,6 +68,7 @@ module.exports = swaggerJsdoc({
             date:        { type: 'string', example: '2025-09-15' },
             time:        { type: 'string', example: '19:30' },
             price:       { type: 'number', example: 15000 },
+            genre:       { type: 'string', example: '로맨스' },
             lat:         { type: 'number', example: 37.5822 },
             lng:         { type: 'number', example: 127.0023 },
             address:     { type: 'string', example: '서울특별시 종로구 동숭동 1-1' },
