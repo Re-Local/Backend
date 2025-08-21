@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const User = require('../models/User'); // ← 스키마가 passwordHash, interestTags 등을 포함해야 함
+const User = require('../models/User'); 
 
 /* -------------------- utils -------------------- */
 const toPublicUser = (u) => {
@@ -67,7 +67,7 @@ router.get('/all', async (req, res, next) => {
         country:     u.country ?? '',
         language:    u.language ?? '',
         // 배열로 저장된 interestTags를 요청 형식에 맞춰 문자열로 변환
-        selectedTag: Array.isArray(u.interestTags) ? u.interestTags.join(',') : (u.interestTag || ''),
+        selectedTag: Array.isArray(u.selectedTags) ? u.selectedTags.join(',') : (u.selectedTags || ''),
         // password/passwordHash는 절대 반환하지 않음
       }));
   
@@ -88,7 +88,7 @@ router.get('/all', async (req, res, next) => {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, gender, userid, password, country, language, interestTag]
+ *             required: [name, gender, userid, password, country, language, selectedTags]
  *             properties:
  *               name:         { type: string,  example: "윤지" }
  *               gender:       { type: integer, enum: [0,1], example: 1 }   # 0: 남자, 1: 여자
@@ -141,7 +141,7 @@ router.post('/signup', async (req, res, next) => {
       gender,
       country,
       language,
-      selectedTags: parseTags(interestTag),
+      selectedTags: parseTags(selectedTags),
       status: 'active',
     });
 
