@@ -11,6 +11,7 @@ const usersRouter = require('./routes/users');
 const transcribeRouter = require('./routes/transcribe');
 const moviesRouter = require('./routes/movies');
 
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -30,7 +31,7 @@ app.use(cors({
   origin: process.env.CLIENT_ORIGIN?.split(',') || 'http://localhost:3000',
   credentials: true,
 }));
-app.use(express.json({ limit: '2mb' })); // 필요시 조절
+app.use(express.json()); // 필요시 조절
 app.use(morgan('dev'));
 
 // (선택) 요청 타임아웃
@@ -50,6 +51,7 @@ app.get('/health', (_, res) => res.json({ ok: true }));
 app.use('/api/users', usersRouter);
 app.use('/api/transcribe', transcribeRouter);
 app.use('/api/movies', moviesRouter);
+
 
 // 404 핸들러
 app.use((req, res) => {
