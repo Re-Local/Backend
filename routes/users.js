@@ -50,7 +50,7 @@ const parseTags = (raw) => {
  *                       userid:      { type: string }
  *                       country:     { type: string }
  *                       language:    { type: string }
- *                      
+ *                       email:       { type: string }
  *                       age:         { type: integer }
  *                       interestTag: { type: string, description: "#festival,#food" }
  *                 total: { type: integer }
@@ -66,7 +66,7 @@ router.get('/all', async (req, res, next) => {
         userid:      u.userid,
         country:     u.country ?? '',
         language:    u.language ?? '',
-
+        email:       u.email ?? '',
         age:         typeof u.age === 'number' ? u.age : null,
         // 배열로 저장된 interestTags를 요청 형식에 맞춰 문자열로 변환
         interestTag: Array.isArray(u.interestTags) ? u.interestTags.join(',') : (u.interestTag || ''),

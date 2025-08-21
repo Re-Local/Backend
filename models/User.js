@@ -10,7 +10,6 @@ const UserSchema = new mongoose.Schema({
   language: String,                                              // 선택
   age: Number,
   interestTags: [{ type: String }],                                   // ['#festival','#food']
-  // 기존 필드(email, providers, nickname 등 있으면 그대로 두세요)
   email: { type: String, unique: true, sparse: true },
 
   nickname: String,
