@@ -179,11 +179,21 @@ router.post('/tt', async (req, res) => {
  *           audio/mpeg: { schema: { type: string, format: binary } }
  *           audio/wav:  { schema: { type: string, format: binary } }
  */
+// 언어 감지
+const hasKorean = (text) => /[가-힣]/.test(text);
+
+// 영어/아랍어 보이스 목록
+const VOICES = {
+  'playai-tts': ['Aria-PlayAI', 'Orion-PlayAI', 'Celeste-PlayAI'], // 영어
+  'playai-tts-arabic': ['Amira-PlayAI', 'Ahmad-PlayAI'] // 아랍어
+};
+
 router.post('/tts', async (req, res) => {
   try {
     const { text, model, voice, format = 'mp3' } = req.body || {};
     if (!text) return res.status(400).json({ error: 'text is required' });
 
+    let
     // 1) 간단 언어 감지 (아랍어 유니코드 블록)
     const hasArabic = /[\u0600-\u06FF]/.test(text);
 
