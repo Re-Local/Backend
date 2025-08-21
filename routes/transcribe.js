@@ -49,7 +49,7 @@ try {
  * @swagger
  * /api/transcribe/stt:
  *   post:
- *     summary: 오디오 → 텍스트 (Groq Whisper)
+ *     summary: "오디오 → 텍스트 (Groq Whisper)"
  *     tags: [Transcribe]
  *     requestBody:
  *       required: true
@@ -97,7 +97,7 @@ router.post('/stt', upload.single('audio'), async (req, res) => {
  * @swagger
  * /api/transcribe/tt:
  *   post:
- *     summary: 텍스트 번역 (Groq Llama, AWS fallback)
+ *     summary: "텍스트 번역 (Groq Llama, AWS fallback)"
  *     tags: [Transcribe]
  *     requestBody:
  *       required: true
@@ -156,7 +156,7 @@ router.post('/tt', async (req, res) => {
  * @swagger
  * /api/transcribe/tts:
  *   post:
- *     summary: 텍스트 → 음성 (Groq PlayAI TTS: 영어/아랍어 자동 스위칭)
+ *     summary: "텍스트 → 음성 (Groq PlayAI TTS: 영어/아랍어 자동 스위칭)"
  *     tags: [Transcribe]
  *     requestBody:
  *       required: true
