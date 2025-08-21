@@ -21,6 +21,40 @@ const upload = multer({ storage });
 
 /**
  * @openapi
+ * /api/transcribe/upload:
+ *   post:
+ *     summary: "녹음한 음성 파일 업로드 및 저장"
+ *     tags: [Transcribe]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               audio:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: 저장된 파일명 반환
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 filename:
+ *                   type: string
+ *                   example: "1692675203423.mp3"
+ */
+router.post('/upload', upload.single('audio'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: '파일이 없습니다.' });
+  res.json({ filename: req.file.filename });
+});
+
+
+/**
+ * @openapi
  * /api/transcribe/stt:
  *   post:
  *     summary: "음성 파일을 텍스트로 변환 (STT)"
@@ -63,6 +97,53 @@ router.post('/stt', upload.single('audio'), async (req, res) => {
 
 /**
  * @openapi
+ * /api/transcribe/stt:
+ *   get:
+ *     summary: "저장된 음성 파일을 텍스트로 변환 (GET)"
+ *     tags: [Transcribe]
+ *     parameters:
+ *       - in: query
+ *         name: filename
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: "서버에 저장된 음성 파일 이름 (예: 1692675203423.mp3)"
+ *     responses:
+ *       200:
+ *         description: 텍스트 변환 결과
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 text:
+ *                   type: string
+ *                   example: "Hello, this is a test"
+ */
+router.get('/stt', async (req, res) => {
+  const { filename } = req.query;
+  const filePath = path.join(uploadDir, filename);
+
+  if (!filename || !fs.existsSync(filePath)) {
+    return res.status(404).json({ error: '파일이 없습니다.' });
+  }
+
+  try {
+    const result = await openai.audio.transcriptions.create({
+      file: fs.createReadStream(filePath),
+      model: 'whisper-1',
+      response_format: 'text',
+    });
+
+    res.json({ text: result });
+  } catch (err) {
+    res.status(500).json({ error: 'STT 실패', detail: err.message });
+  }
+});
+
+
+/**
+ * @openapi
  * /api/transcribe/sts:
  *   get:
  *     summary: "저장된 음성 파일로부터 자동 번역 음성을 생성 (STT → 번역 → TTS)"
@@ -73,7 +154,8 @@ router.post('/stt', upload.single('audio'), async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
- *         description: "업로드된 음성 파일 이름 (예: 1692603423.mp3)"
+ *         description: "업로드된 음성 파일 이름입니다. 쿼리 파라미터로 사용하세요 (예: /sts?filename=1692603423.mp3)"
+
  *     responses:
  *       200:
  *         description: "번역된 음성 mp3 반환"
@@ -192,6 +274,58 @@ router.post('/tt', async (req, res) => {
   }
 });
 
+/**
+ * @openapi
+ * /api/transcribe/tt:
+ *   get:
+ *     summary: "텍스트 번역 (GET)"
+ *     tags: [Transcribe]
+ *     parameters:
+ *       - in: query
+ *         name: text
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: "번역할 텍스트"
+ *       - in: query
+ *         name: targetLang
+ *         required: false
+ *         schema:
+ *           type: string
+ *         description: "번역 대상 언어 (기본값: en)"
+ *     responses:
+ *       200:
+ *         description: 번역된 텍스트 반환
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 translated:
+ *                   type: string
+ *                   example: "Hello"
+ */
+router.get('/tt', async (req, res) => {
+  const { text, targetLang = 'en' } = req.query;
+
+  if (!text) return res.status(400).json({ error: 'text는 필수입니다.' });
+
+  try {
+    const prompt = `다음 문장을 ${targetLang}로 번역해줘:\n"${text}"`;
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const translated = completion.choices[0].message.content;
+    res.json({ translated });
+  } catch (err) {
+    res.status(500).json({ error: 'TT 실패', detail: err.message });
+  }
+});
+
+
 
 /**
  * @openapi
@@ -243,5 +377,56 @@ router.post('/tts', async (req, res) => {
     res.status(500).json({ error: 'TTS 실패', detail: err.message });
   }
 });
+
+/**
+ * @openapi
+ * /api/transcribe/tts:
+ *   get:
+ *     summary: "텍스트 → 음성 변환 (GET)"
+ *     tags: [Transcribe]
+ *     parameters:
+ *       - in: query
+ *         name: text
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: "음성으로 변환할 텍스트"
+ *       - in: query
+ *         name: language
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [ko, en]
+ *         description: "음성 언어 (기본값: ko)"
+ *     responses:
+ *       200:
+ *         description: 생성된 음성(mp3) 반환
+ *         content:
+ *           audio/mpeg:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+router.get('/tts', async (req, res) => {
+  const { text, language = 'ko' } = req.query;
+  if (!text) return res.status(400).json({ error: 'text가 필요합니다.' });
+
+  try {
+    const tts = await openai.audio.speech.create({
+      model: 'tts-1-hd',
+      voice: language === 'ko' ? 'nova' : 'shimmer',
+      input: text,
+      response_format: 'mp3',
+    });
+
+    const buffer = Buffer.from(await tts.arrayBuffer());
+    res.set('Content-Type', 'audio/mpeg');
+    res.set('Content-Disposition', 'inline; filename="tts.mp3"');
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).json({ error: 'TTS 실패', detail: err.message });
+  }
+});
+
 
 module.exports = router;
