@@ -63,6 +63,79 @@ router.post('/stt', upload.single('audio'), async (req, res) => {
 
 /**
  * @openapi
+ * /api/transcribe/sts:
+ *   get:
+ *     summary: "저장된 음성 파일로부터 자동 번역 음성을 생성 (STT → 번역 → TTS)"
+ *     tags: [Transcribe]
+ *     parameters:
+ *       - in: query
+ *         name: filename
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: "업로드된 음성 파일 이름 (예: 1692603423.mp3)"
+ *     responses:
+ *       200:
+ *         description: "번역된 음성 mp3 반환"
+ *         content:
+ *           audio/mpeg:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+router.get('/sts', async (req, res) => {
+  const { filename } = req.query;
+  if (!filename) {
+    return res.status(400).json({ error: 'filename 쿼리 파라미터가 필요합니다.' });
+  }
+
+  const filePath = path.join(uploadDir, filename);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: '파일을 찾을 수 없습니다.' });
+  }
+
+  try {
+    // 1. STT
+    const transcription = await openai.audio.transcriptions.create({
+      file: fs.createReadStream(filePath),
+      model: 'whisper-1',
+      response_format: 'text',
+    });
+    const originalText = transcription;
+
+    // 2. 언어 감지
+    const isKorean = /[가-힣]/.test(originalText);
+    const targetLang = isKorean ? 'en' : 'ko';
+
+    // 3. 번역
+    const prompt = `다음 문장을 ${targetLang}로 번역해줘:\n"${originalText}"`;
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+    });
+    const translatedText = completion.choices[0].message.content;
+
+    // 4. TTS
+    const tts = await openai.audio.speech.create({
+      model: 'tts-1-hd',
+      voice: targetLang === 'ko' ? 'nova' : 'shimmer',
+      input: translatedText,
+      response_format: 'mp3',
+    });
+
+    const buffer = Buffer.from(await tts.arrayBuffer());
+    res.set('Content-Type', 'audio/mpeg');
+    res.set('Content-Disposition', 'inline; filename="translated.mp3"');
+    res.send(buffer);
+  } catch (err) {
+    console.error('STS Error:', err);
+    res.status(500).json({ error: 'STS 실패', detail: err.message });
+  }
+});
+
+
+/**
+ * @openapi
  * /api/transcribe/tt:
  *   post:
  *     summary: "텍스트 번역 (TT)"

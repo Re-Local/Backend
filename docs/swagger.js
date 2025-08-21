@@ -40,19 +40,8 @@ module.exports = swaggerJsdoc({
           },
         },
 
-        // ✅ 기존 영화 검색용 (KOBIS)
-        KobisMovie: {
-          type: 'object',
-          properties: {
-            code:      { type: 'string', description: 'KOBIS movieCd' },
-            name:      { type: 'string' },
-            nameEn:    { type: 'string' },
-            openDate:  { type: 'string', description: 'YYYYMMDD' },
-            genre:     { type: 'string' },
-            directors: { type: 'string', description: '감독명 콤마 구분' },
-            nations:   { type: 'string' },
-          },
-        },
+  
+       
 
         // ✅ 연극 상영용 TheaterPlay
         TheaterPlay: {
@@ -78,6 +67,7 @@ module.exports = swaggerJsdoc({
       { name: 'Users', description: '회원 관련 API' },
       { name: 'Plays', description: '영화 검색 (KOBIS)' },
       { name: 'Transcribe', description: '번역, 통역 API' },
+      { name: "Play", description: '연극 정보 API'},
 
     ],
   },
