@@ -51,8 +51,8 @@ const parseTags = (raw) => {
  *                       country:     { type: string }
  *                       language:    { type: string }
  *                       email:       { type: string }
- *                       age:         { type: integer }
- *                       interestTag: { type: string, description: "#festival,#food" }
+ *                    
+ *                       selectedTags: { type: string, description: "#festival,#food" }
  *                 total: { type: integer }
  */
 router.get('/all', async (req, res, next) => {
@@ -66,10 +66,8 @@ router.get('/all', async (req, res, next) => {
         userid:      u.userid,
         country:     u.country ?? '',
         language:    u.language ?? '',
-        email:       u.email ?? '',
-        age:         typeof u.age === 'number' ? u.age : null,
         // 배열로 저장된 interestTags를 요청 형식에 맞춰 문자열로 변환
-        interestTag: Array.isArray(u.interestTags) ? u.interestTags.join(',') : (u.interestTag || ''),
+        selectedTag: Array.isArray(u.interestTags) ? u.interestTags.join(',') : (u.interestTag || ''),
         // password/passwordHash는 절대 반환하지 않음
       }));
   
@@ -90,7 +88,7 @@ router.get('/all', async (req, res, next) => {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [name, gender, userid, password, country, language, age, interestTag]
+ *             required: [name, gender, userid, password, country, language, interestTag]
  *             properties:
  *               name:         { type: string,  example: "윤지" }
  *               gender:       { type: integer, enum: [0,1], example: 1 }   # 0: 남자, 1: 여자
@@ -99,8 +97,8 @@ router.get('/all', async (req, res, next) => {
  *               country:      { type: string,  example: "Korea" }
  *               language:     { type: string,  example: "Korean" }
  *               
- *               age:          { type: integer, example: 23 }
- *               interestTag:  { type: string,  example: "#festival,#food" }
+ *             
+ *               selectedTag:  { type: string,  example: "#festival,#food" }
  *           examples:
  *             기본:
  *               summary: 기본 회원가입 예시
@@ -111,8 +109,7 @@ router.get('/all', async (req, res, next) => {
  *                 password: "pw1234!"
  *                 country: "Korea"
  *                 language: "Korean"
- *                 age: 23
- *                 interestTag: "#festival,#food"
+ *                 selectedTags: "#festival,#food"
  *     responses:
  *       201:
  *         description: 가입 성공
@@ -127,7 +124,7 @@ router.get('/all', async (req, res, next) => {
  
 router.post('/signup', async (req, res, next) => {
   try {
-    const { name, gender, userid, password, country, language, age, interestTag } = req.body || {};
+    const { name, gender, userid, password, country, language, selectedTag } = req.body || {};
 
     if (!userid || !password) return res.status(400).json({ error: 'userid와 password는 필수입니다.' });
     if (!(gender === 0 || gender === 1)) return res.status(400).json({ error: 'gender는 0 또는 1이어야 합니다.' });
@@ -144,9 +141,7 @@ router.post('/signup', async (req, res, next) => {
       gender,
       country,
       language,
-    
-      age,
-      interestTags: parseTags(interestTag),
+      selectedTags: parseTags(interestTag),
       status: 'active',
     });
 
