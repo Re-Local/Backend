@@ -7,7 +7,8 @@ const UserSchema = new mongoose.Schema({
   gender: { type: Number, enum: [0, 1] },
   country: String,
   language: String,
-  selectedTags: { type: String }, // 문자열로 저장 (쉼표구분)
+  selectedTags: { type: String }, // ✅ 문자열 하나로 저장 (예: "#festival,#food")
+
   status: { type: String, default: 'active' },
   deletedAt: Date,
 }, { timestamps: true });

@@ -50,7 +50,7 @@ const parseTags = (raw) => {
  *                       userid:      { type: string }
  *                       country:     { type: string }
  *                       language:    { type: string }
- *                       email:       { type: string }
+ *                      
  *                    
  *                       selectedTags: { type: string, description: "#festival,#food" }
  *                 total: { type: integer }
@@ -67,7 +67,7 @@ router.get('/all', async (req, res, next) => {
         country:     u.country ?? '',
         language:    u.language ?? '',
         // 배열로 저장된 interestTags를 요청 형식에 맞춰 문자열로 변환
-        selectedTag: Array.isArray(u.selectedTags) ? u.selectedTags.join(',') : (u.selectedTags || ''),
+        selectedTags: u.selectedTags ?? '',
         // password/passwordHash는 절대 반환하지 않음
       }));
   
@@ -98,7 +98,7 @@ router.get('/all', async (req, res, next) => {
  *               language:     { type: string,  example: "Korean" }
  *               
  *             
- *               selectedTag:  { type: string,  example: "#festival,#food" }
+ *               selectedTags:  { type: string,  example: "#festival,#food" }
  *           examples:
  *             기본:
  *               summary: 기본 회원가입 예시
@@ -124,7 +124,7 @@ router.get('/all', async (req, res, next) => {
  
 router.post('/signup', async (req, res, next) => {
   try {
-    const { name, gender, userid, password, country, language, selectedTag } = req.body || {};
+    const { name, gender, userid, password, country, language, selectedTags } = req.body || {};
 
     if (!userid || !password) return res.status(400).json({ error: 'userid와 password는 필수입니다.' });
     if (!(gender === 0 || gender === 1)) return res.status(400).json({ error: 'gender는 0 또는 1이어야 합니다.' });
@@ -141,7 +141,7 @@ router.post('/signup', async (req, res, next) => {
       gender,
       country,
       language,
-      selectedTags: parseTags(selectedTags),
+      selectedTags,
       status: 'active',
     });
 

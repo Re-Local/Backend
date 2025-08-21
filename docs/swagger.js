@@ -32,11 +32,7 @@ module.exports = swaggerJsdoc({
             gender:     { type: 'integer', enum: [0, 1], description: '0:남 1:여' },
             country:    { type: 'string' },
             language:   { type: 'string' },
-            selectedTags: {
-              type: 'array',
-              items: { type: 'string' },
-              example: ['#festival', '#food'],
-            },
+            selectedTags:   { type: 'string' },
             status:     { type: 'string', example: 'active' },
             createdAt:  { type: 'string', format: 'date-time' },
             updatedAt:  { type: 'string', format: 'date-time' },
