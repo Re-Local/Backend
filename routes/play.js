@@ -1,4 +1,3 @@
-// routes/play.js
 const express = require('express');
 const router = express.Router();
 const TheaterPlay = require('../models/TheaterPlay');
@@ -6,17 +5,14 @@ const TheaterPlay = require('../models/TheaterPlay');
 // 한글 카테고리 → 영어 매핑
 const mapCategory = (raw) => {
   if (!raw) return '';
-  // "🗂️ 연극 > 로맨틱코미디" → "로맨틱코미디"
-  const base = String(raw).split('>').pop().trim();
-
+  const base = String(raw).split('>').pop().trim(); // "🗂️ 연극 > 로맨틱코미디" → "로맨틱코미디"
   if (/(로맨틱코미디|로맨스)/i.test(base)) return 'Romance';
   if (/코미디/i.test(base))               return 'Comedy';
-  // '공포/스릴러'는 슬래시 이스케이프 하거나, 둘 중 하나가 들어있으면 매칭
   if (/(공포|스릴러)/i.test(base))        return 'Horror/Thriller';
   if (/드라마/i.test(base))               return 'Drama';
   if (/비극/i.test(base))                 return 'Tragedy';
   if (/뮤지컬/i.test(base))               return 'Musical';
-  return base; // 혹시 다른 값이면 원문 접미사 그대로
+  return base;
 };
 
 /**
@@ -31,13 +27,14 @@ const mapCategory = (raw) => {
  */
 router.get('/', async (req, res, next) => {
   try {
-    const rows = await TheaterPlay.find()
-      .select('area category title sale price stars')
+    const rows = await TheaterPlay.find({}, null, { sort: { createdAt: -1 } })
+      .select('area category title sale price stars location posterUrl detailUrl')
       .lean();
 
-    const items = rows.map((d) => ({
-      ...d,
-      category: mapCategory(d.category),
+    const items = rows.map(({ _id, area, category, title, sale, price, stars, location, posterUrl, detailUrl }) => ({
+      _id, area, title, sale, price, stars, posterUrl, detailUrl,
+      category: mapCategory(category),
+      location: location || null,
     }));
 
     res.json({ items });

@@ -1,5 +1,11 @@
-// models/TheaterPlay.js
 const mongoose = require('mongoose');
+
+const LocationSchema = new mongoose.Schema({
+  name: String,
+  address: String,
+  lat: Number,
+  lng: Number,
+}, { _id: false });
 
 const TheaterPlaySchema = new mongoose.Schema({
   area: String,
@@ -8,16 +14,14 @@ const TheaterPlaySchema = new mongoose.Schema({
   sale: String,
   price: String,
   stars: Number,
-  imageUrl: String,    // 기존 썸네일
-  detailUrl: String,   // 상세페이지 URL
 
-  // 🎯 장소 관련 크롤링 정보
-  venueName: String,   // 공연장 이름
-  address: String,     // 공연장 주소
-  lat: Number,         // 위도
-  lng: Number,         // 경도
-  posterUrl: String,   // 큰 포스터 이미지 (meta 태그 기반)
+  imageUrl: String,
+  posterUrl: String,
+  detailUrl: { type: String, index: true },
 
+  location: LocationSchema,
 }, { timestamps: true });
+
+TheaterPlaySchema.index({ detailUrl: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('TheaterPlay', TheaterPlaySchema, 'theaterplays');
