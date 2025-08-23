@@ -10,7 +10,7 @@ const swaggerSpec = require('./docs/swagger');
 const usersRouter = require('./routes/users');
 const transcribeRouter = require('./routes/transcribe');
 const moviesRouter = require('./routes/movies');
-
+const playRouter = require('./routes/play');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -51,6 +51,7 @@ app.get('/health', (_, res) => res.json({ ok: true }));
 app.use('/api/users', usersRouter);
 app.use('/api/transcribe', transcribeRouter);
 app.use('/api/movies', moviesRouter);
+app.use('/api/play', playRouter);
 
 
 // 404 핸들러
