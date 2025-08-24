@@ -181,14 +181,33 @@ router.post('/signup', async (req, res, next) => {
 router.post('/login', async (req, res, next) => {
   try {
     const { userid, password } = req.body || {};
-    const user = await User.findOne({ userid }).lean();
-    if (!user || !user.passwordHash) return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
+    const uid = String(userid || '').trim();
+    const pw  = String(password || '').trim();
+    if (!uid || !pw) return res.status(400).json({ error: 'userid와 password는 필수입니다.' });
 
-    const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
+    // 선택: userid를 소문자로 정규화(회원가입도 동일하게 적용 권장)
+    const normUid = uid.toLowerCase();
 
+    const user = await User.findOne({ userid: normUid }).select('+passwordHash').lean();
+    if (!user) {
+      console.warn('login_fail', { uid: normUid, reason: 'no_user' });
+      return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
+    }
+if (!user.passwordHash) {
+      console.warn('login_fail', { uid: normUid, reason: 'no_hash' });
+      return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
+    }
+
+    const ok = await bcrypt.compare(pw, user.passwordHash);
+    if (!ok) {
+      console.warn('login_fail', { uid: normUid, reason: 'bad_password' });
+      return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
+    }
+
+    console.log('login_ok', { uid: normUid });
     res.json({ ok: true, user: toPublicUser(user) });
   } catch (e) { next(e); }
 });
+
 
 module.exports = router;

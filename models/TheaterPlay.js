@@ -1,7 +1,8 @@
+// models/TheaterPlay.js
 const mongoose = require('mongoose');
 
 const LocationSchema = new mongoose.Schema({
-  name: String,
+  areaName: String,
   address: String,
   lat: Number,
   lng: Number,
@@ -14,14 +15,13 @@ const TheaterPlaySchema = new mongoose.Schema({
   sale: String,
   price: String,
   stars: Number,
-
   imageUrl: String,
   posterUrl: String,
-  detailUrl: { type: String, index: true },
-
+  detailUrl: String, // ← index: true 제거
   location: LocationSchema,
 }, { timestamps: true });
 
+// 여기만 유지(고유 인덱스)
 TheaterPlaySchema.index({ detailUrl: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('TheaterPlay', TheaterPlaySchema, 'theaterplays');
