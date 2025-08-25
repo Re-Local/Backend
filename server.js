@@ -41,7 +41,7 @@ app.use(cors({
   credentials: false,
 }));
 
-
+//ㄹㄹㄷㄹ
 app.use(express.json());
 app.use(morgan('dev'));
 app.use((req, _res, next) => { req.setTimeout(60_000); next(); });
