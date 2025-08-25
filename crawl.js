@@ -58,15 +58,36 @@ async function extractLabeled(page, label) {
 }
 
 // "뮤지컬 > 코미디" / "연극 > 로맨틱코미디"에서 '>' 오른쪽만
-function extractRightSideCategory(txt='') {
+function extractRightSideCategory(txt = '') {
   const s = String(txt)
-    .replace(/[／⁄∕]/g,'/')
-    .replace(/[＞›»〉]/g,'>')
-    .replace(/[·•・⋅]/g,' ')
-    .replace(/\s+/g,' ')
+    .replace(/[／⁄∕]/g, '/')          // 슬래시 통일
+    .replace(/[＞›»〉]/g, '>')         // 부등호 통일
+    .replace(/[·•・⋅]/g, ' ')          // 불필요한 점 제거
+    .replace(/[^\w가-힣\s>/]/g, '')     // 🎭 등 이모지 제거
+    .replace(/\s+/g, ' ')              // 공백 정리
     .trim();
+
   const m = s.match(/(?:뮤지컬|연극)\s*>\s*([가-힣A-Za-z/\s,&-]+)/);
   return m ? m[1].trim() : '';
+}
+
+function fallbackCategoryFromTitle(title = '') {
+  const t = title.replace(/\s+/g, '').toLowerCase();
+
+  const matches = [
+    { list: ['한뼘사이','뷰티플라이프','사내연애','핫식스','ps파트너','운빨','옥탑방','비누향기','사빠디','연애','오류404','남사친','여사친','사춘기','웨딩브레이커','시작하는여자','끝내주는남자','김종욱찾기','쇼머스트고온','왓이프','써니펜'], category: 'Romance' },
+    { list: ['죽여주는','과속스캔들','라면','2호선','목소리','오백에삼십','보물찾기','딜리버리','늘근도둑','고도를기다리며를','라이어','행오버','끝까지','졸탄','코미디','택시안에서','드립소년단','영시기','스탠드업','게스트하우스','행쇼','뱀프','헌터','해피오','프리즌'], category: 'Comedy' },
+    { list: ['고도를기다리며','베이컨','브릴리언트','서울의별','햄릿','사막의별','세컨드','불편한편의점','맥주한잔','문턱','시간을파는','내일은','아모르파티','타임','슈펀맨','체호프','이공칠','썸데이','스웨그','조선','르마스크','낙원','트레드밀','더크리처','다시','동물원','민들레','연남동','어서오세요','휴남동','시간을넘어서'], category: 'Drama' },
+    { list: ['오마이갓','쉬어매드니스','자취','701호','조각','괴담','두여자','스위치','기억의숲','크리미널','앙리에트','흉터','멈춰진','위험한','실종사건'], category: 'Horror/Thriller' },
+  ];
+
+  for (const group of matches) {
+    if (group.list.some(keyword => t.includes(keyword.replace(/\s+/g, '').toLowerCase()))) {
+      return group.category;
+    }
+  }
+
+  return 'Others';
 }
 
 // 동의어 정규화(원하면 그대로 반환해도 OK)
@@ -155,7 +176,11 @@ function normalizeCategoryKR(raw='') {
         (await page.locator('.category, .cate, .genre, .product-category, .badge, .tag')
                    .first().textContent().catch(() => '')) || '';
       detailCat = extractRightSideCategory(detailCat) || detailCat;
-      const categoryK = seed.category || normalizeCategoryKR(detailCat) || '';
+      const categoryK =
+  seed.category ||
+  normalizeCategoryKR(detailCat) ||
+  fallbackCategoryFromTitle(titleText) || '';
+
 
       // 3) posterUrl: 리스트 우선, 없으면 상세에서 보강
       const posterFromDetail =
@@ -185,20 +210,8 @@ function normalizeCategoryKR(raw='') {
       address  = cleanAddress(address);
 
       // 좌표
-      let lat, lng;
-      const dataset = await page.evaluate(() => {
-        const el = document.querySelector('#map, .map, [data-lat][data-lng]');
-        return el ? { lat: el.dataset.lat, lng: el.dataset.lng } : null;
-      });
-      if (dataset) { lat = toNum(dataset.lat); lng = toNum(dataset.lng); }
-      if (lat === undefined || lng === undefined) {
-        const scripts = await page.$$eval('script', arr => arr.map(s => s.textContent || ''));
-        const big = scripts.join('\n');
-        const m =
-          big.match(/(?:LatLng|new\s+kakao\.maps\.LatLng)\s*\(\s*([\d.]+)\s*,\s*([\d.]+)\s*\)/i) ||
-          big.match(/lat\s*[:=]\s*([\d.]+)[,\s]+lng\s*[:=]\s*([\d.]+)/i);
-        if (m) { lat = toNum(m[1]); lng = toNum(m[2]); }
-      }
+      
+      
 
       // 저장
       const $set = {
@@ -209,7 +222,7 @@ function normalizeCategoryKR(raw='') {
         location: {                        // 5~6
           areaName: areaName || undefined,
           address:  address  || undefined,
-          lat, lng
+         
         }
       };
 
