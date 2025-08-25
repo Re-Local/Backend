@@ -12,6 +12,7 @@ const transcribeRouter = require('./routes/transcribe');
 const moviesRouter = require('./routes/movies');
 const playRouter = require('./routes/play');
 const imageProxy = require('./routes/imageProxy');
+const searchRouter = require('./routes/search');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -55,7 +56,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/transcribe', transcribeRouter);
 app.use('/api/movies', moviesRouter);
 app.use('/api/play', playRouter);
-
+app.use('/api/search', searchRouter);
 
 // 404 핸들러
 app.use((req, res) => {

@@ -198,7 +198,9 @@ function normalizeCategoryKR(raw='') {
       const posterFromDetail =
         (await page.locator('meta[property="og:image"]').getAttribute('content').catch(() => null)) ||
         (await page.locator('.poster img, .product_view img, .gallery img').first().getAttribute('src').catch(() => null));
-      const posterAbs = seed.posterUrl || (posterFromDetail ? abs(posterFromDetail) : undefined);
+      // ✅ 안정적인 og:image 우선, 없을 때만 리스트 썸네일
+const posterAbs = (posterFromDetail ? abs(posterFromDetail) : undefined) || seed.posterUrl;
+
 
       // '장소' 탭 열기
       const tab = page.getByRole('tab', { name: '장소' });
