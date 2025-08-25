@@ -16,6 +16,7 @@ const toNum = (v) => {
 const clean = (s='') => s.replace(/\s+/g, ' ').trim();
 const cleanAddress = (s='') => s.replace(/^\s*주소\s*[:：]?\s*/,'').replace(/\s+/g,' ').trim();
 
+
 // 메타/헤더에서 제목 보강
 async function extractTitle(page) {
   const t =
@@ -71,6 +72,12 @@ function extractRightSideCategory(txt = '') {
   return m ? m[1].trim() : '';
 }
 
+function extractPureTitle(title = '') {
+  const m = title.match(/\[[^\]]+\](.+?)\s*-\s*타임티켓/);
+  return m ? m[1].trim() : title;
+}
+
+
 function fallbackCategoryFromTitle(title = '') {
   const t = title.replace(/\s+/g, '').toLowerCase();
 
@@ -116,10 +123,13 @@ function normalizeCategoryKR(raw='') {
   });
 
   const $ = cheerio.load(html);
-  const items = [];
+  
+
   const seen = new Set();
   const preMap = Object.create(null);        // detailUrl -> { title, category, posterUrl }
+  const items = []; // 이 선언 빠짐
 
+  
   $('a[href^="/product/"]').each((_, a) => {
     const href = $(a).attr('href');
     if (!href) return;
@@ -169,6 +179,8 @@ function normalizeCategoryKR(raw='') {
       // 1) title: 리스트 우선, 없으면 상세 메타로 보강
       const seed = preMap[detailUrl] || {};
       let titleText = seed.title || await extractTitle(page);
+      titleText = extractPureTitle(titleText);
+
 
       // 2) category: 반드시 '장소' 탭 열기 전에
       let detailCat =

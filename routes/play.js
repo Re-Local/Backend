@@ -117,9 +117,12 @@ router.get('/', async (req, res, next) => {
         const fallback = fallbackCategoryFromTitle(d.title || '');
         return {
           ...d,
+          title: extractPureTitle(d.title || ''),
           category: mappedCategory || fallback
         };
       });
+      
+
       
 
     res.json({ items });
