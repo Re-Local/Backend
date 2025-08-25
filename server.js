@@ -35,11 +35,11 @@ app.get('/docs', swaggerUi.setup(swaggerSpec, { explorer: true }));
 
 
 // ===== Middlewares =====
-// ✅ CORS 설정
+/* ✅ CORS 설정
 app.use(cors({
   origin: '*',
   credentials: false,
-}));
+})); */
 
 //ㄹㄹㄷㄹ
 app.use(express.json());
