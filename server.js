@@ -37,7 +37,7 @@ if (!process.env.MONGODB_URI) {
 app.use('/docs', swaggerUi.serve);
 app.get('/docs', swaggerUi.setup(swaggerSpec, { explorer: true }));
 
-ㅊ
+
 // ===== Middlewares =====
 app.use(cors());
 
