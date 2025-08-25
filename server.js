@@ -11,6 +11,7 @@ const usersRouter = require('./routes/users');
 const transcribeRouter = require('./routes/transcribe');
 const moviesRouter = require('./routes/movies');
 const playRouter = require('./routes/play');
+const imageProxy = require('./routes/imageProxy');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -39,6 +40,8 @@ app.use((req, res, next) => {
   req.setTimeout(60_000); // 60s
   next();
 });
+
+app.use('/image-proxy', imageProxy);
 
 // Swagger
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));

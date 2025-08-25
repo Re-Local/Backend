@@ -4,19 +4,20 @@ const router = express.Router();
 const TheaterPlay = require('../models/TheaterPlay');
 
 // 문자열 안전 정제: "[연극] 옥탑방 고양이 - 타임티켓" → "옥탑방 고양이"
+// 문자열 안전 정제: "[연극] 옥탑방 고양이 - 타임티켓" → "옥탑방 고양이"
 function extractPureTitle(raw = '') {
   if (typeof raw !== 'string') return '';
-  // 제로폭공백 제거 등 사소한 숨김문자 제거
-  const title = raw.replace(/\u200B/g, '');
-  // 패턴 매치 ([- 타임티켓] 부분이 없어도 동작)
-  const m = title.match(/\[[^\]]*]\s*([^[-]+(?:-[^-]+?)?)\s*(?:-\s*타임티켓)?$/);
-  if (m) return m[1].trim();
-  // 일반적인 케이스: 앞 대괄호 태그와 뒤 " - 타임티켓" 제거
-  return title
-    .replace(/^\[[^\]]*]\s*/, '')
-    .replace(/\s*-\s*타임티켓\s*$/, '')
-    .trim();
+  const s = raw.replace(/\u200B/g, '').trim();
+
+  // 1) "[...]" 접두 + 선택적 " - 타임티켓" 접미
+  const m = s.match(/^\s*\[[^\]]*]\s*(.*?)\s*(?:-\s*타임티켓)?\s*$/i);
+  if (m && m[1]) return m[1].trim();
+
+  // 2) 대괄호가 없고 뒤에만 " - 타임티켓" 있는 경우
+  const n = s.replace(/\s*-\s*타임티켓\s*$/i, '').trim();
+  return n;
 }
+
 
 function fallbackCategoryFromTitle(title = '') {
   const t = (typeof title === 'string' ? title : '').replace(/\s+/g, '').toLowerCase();
