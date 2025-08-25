@@ -15,7 +15,7 @@ const transcribeRouter = require('./routes/transcribe');
 const moviesRouter = require('./routes/movies');
 const playRouter = require('./routes/play');
 const searchRouter = require('./routes/search');
-const imageProxy = require('./routes/imageProxy');
+// const imageProxy = require('./routes/imageProxy');
 const imageCache = require('./routes/imageCache'); // 쓰는 경우
 
 const app = express();
@@ -52,28 +52,28 @@ app.use((req, _res, next) => { req.setTimeout(60_000); next(); });
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 // ===== Feature routes (404보다 위) =====
-app.get('/image-proxy', async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*'); // 👈 수동 추가도 가능
+// app.get('/image-proxy', async (req, res) => {
+//   res.setHeader('Access-Control-Allow-Origin', '*'); // 👈 수동 추가도 가능
 
-  try {
-    const { url } = req.query;
-    const response = await axios.get(url, {
-      responseType: 'stream',
-      headers: {
-        'Referer': 'https://timeticket.co.kr',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116 Safari/537.36',
-        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
-      }
-    });
+//   try {
+//     const { url } = req.query;
+//     const response = await axios.get(url, {
+//       responseType: 'stream',
+//       headers: {
+//         'Referer': 'https://timeticket.co.kr',
+//         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116 Safari/537.36',
+//         'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+//         'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
+//       }
+//     });
 
-    res.set('Content-Type', response.headers['content-type']);
-    response.data.pipe(res);
-  } catch (err) {
-    console.error('프록시 오류:', err);
-    res.status(err.response?.status || 500).send('프록시 실패');
-  }
-});
+//     res.set('Content-Type', response.headers['content-type']);
+//     response.data.pipe(res);
+//   } catch (err) {
+//     console.error('프록시 오류:', err);
+//     res.status(err.response?.status || 500).send('프록시 실패' + url);
+//   }
+// });
 
 
 app.use('/image-cache', imageCache); // 선택 사용
