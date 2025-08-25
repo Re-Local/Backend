@@ -3,6 +3,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const axios = require('axios');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
 const swaggerUi = require('swagger-ui-express');
@@ -20,6 +21,11 @@ const imageCache = require('./routes/imageCache'); // 쓰는 경우
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// ✅ CORS 설정
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://your-frontend.com'], // 여기에 프론트 주소 넣기
+  credentials: true
+}));
 
 // Required env
 if (!process.env.MONGODB_URI) {
@@ -44,7 +50,25 @@ app.use((req, _res, next) => { req.setTimeout(60_000); next(); });
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 // ===== Feature routes (404보다 위) =====
-app.use('/image-proxy', imageProxy);
+app.get('/image-proxy', async (req, res) => {
+  try {
+    const { url } = req.query;
+    const response = await axios.get(url, {
+      responseType: 'stream',
+      headers: {
+        'Referer': 'https://timeticket.co.kr', // 이미지 서버가 기대하는 리퍼러
+        'User-Agent': 'Mozilla/5.0 (compatible; MyProxy/1.0)' // 브라우저처럼 보이게 설정
+      }
+    });
+        // 이미지 타입 유지
+        res.set('Content-Type', response.headers['content-type']);
+        response.data.pipe(res);
+      } catch (err) {
+        console.error('이미지 요청 에러:', err.message);
+        res.status(err.response?.status || 500).send('이미지 요청 실패');
+      }
+    });
+
 app.use('/image-cache', imageCache); // 선택 사용
 
 app.use('/api/users', usersRouter);
@@ -70,7 +94,9 @@ app.use((err, _req, res, _next) => {
 mongoose.connect(process.env.MONGODB_URI, { dbName: 're_local' })
   .then(() => {
     console.log('✅ MongoDB connected');
-    app.listen(PORT, () => console.log(`🚀 http://localhost:${PORT}`));
+    app.listen(PORT, () => {
+      console.log(`Server listening on port ${PORT}`);
+    });
   })
   .catch(err => { console.error(err); process.exit(1); });
 
