@@ -31,12 +31,11 @@ if (!process.env.MONGODB_URI) {
 app.use('/docs', swaggerUi.serve);
 app.get('/docs', swaggerUi.setup(swaggerSpec, { explorer: true }));
 
-
+ㅊ
 // ===== Middlewares =====
-app.use(cors({
-  origin: process.env.CLIENT_ORIGIN?.split(',') || 'http://localhost:3000',
-  credentials: true,
-}));
+app.use(cors());
+
+
 app.use(express.json());
 app.use(morgan('dev'));
 app.use((req, _res, next) => { req.setTimeout(60_000); next(); });
