@@ -106,3 +106,4 @@ mongoose.connect(process.env.MONGODB_URI, { dbName: 're_local' })
 // Debug
 console.log('✅ Swagger Paths:');
 console.log(Object.keys(swaggerSpec.paths));
+console.log('hello');
