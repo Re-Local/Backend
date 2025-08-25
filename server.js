@@ -21,7 +21,13 @@ const imageCache = require('./routes/imageCache'); // 쓰는 경우
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+app.set('trust proxy', 1); // if behind a proxy (e.g. Heroku, AWS ELB, Nginx)
 
+//✅ CORS 설정
+app.use(cors({
+  origin: '*',
+  credentials: true,
+})); 
 
 // Required env
 if (!process.env.MONGODB_URI) {
@@ -35,11 +41,7 @@ app.get('/docs', swaggerUi.setup(swaggerSpec, { explorer: true }));
 
 
 // ===== Middlewares =====
-//✅ CORS 설정
-app.use(cors({
-  origin: '*',
-  credentials: true,
-})); 
+
 
 //ㄹㄹㄷㄹ
 app.use(express.json());
@@ -59,7 +61,9 @@ app.get('/image-proxy', async (req, res) => {
       responseType: 'stream',
       headers: {
         'Referer': 'https://timeticket.co.kr',
-        'User-Agent': 'Mozilla/5.0'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116 Safari/537.36',
+        'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7'
       }
     });
 
