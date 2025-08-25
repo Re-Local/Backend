@@ -43,10 +43,17 @@ app.use((req, res, next) => {
 });
 
 app.use('/image-proxy', imageProxy);
+// 404 핸들러
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not Found', path: req.originalUrl });
+});
+
 
 // Swagger
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 app.get('/docs.json', (_, res) => res.json(swaggerSpec));
+app.use('/image-cache', require('./routes/imageCache'));
+
 
 // 헬스체크
 app.get('/health', (_, res) => res.json({ ok: true }));
@@ -58,10 +65,6 @@ app.use('/api/movies', moviesRouter);
 app.use('/api/play', playRouter);
 app.use('/api/search', searchRouter);
 
-// 404 핸들러
-app.use((req, res) => {
-  res.status(404).json({ error: 'Not Found', path: req.originalUrl });
-});
 
 // 에러 핸들러
 app.use((err, req, res, _next) => {
