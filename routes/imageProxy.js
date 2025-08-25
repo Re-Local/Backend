@@ -1,79 +1,68 @@
+// routes/imageProxy.js
 const express = require('express');
-const axios = require('axios');
-const cheerio = require('cheerio');
+const { pipeline } = require('stream');
+const { promisify } = require('util');
+const stream = promisify(pipeline);
+
+// Node 18+면 global.fetch 사용, 아니면 node-fetch 동적 import
+const fetch = global.fetch || ((...a) => import('node-fetch').then(({default: f}) => f(...a)));
+
 const router = express.Router();
 
-const ALLOW = new Set(['timeticket.co.kr','www.timeticket.co.kr']);
-const guessType = (p='') => p.toLowerCase().endsWith('.png') ? 'image/png'
-  : p.toLowerCase().endsWith('.webp') ? 'image/webp'
-  : p.toLowerCase().endsWith('.gif') ? 'image/gif'
-  : 'image/jpeg';
-
-const UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
-
-async function fetchImage(url, referer) {
-  return axios.get(url, {
-    responseType: 'arraybuffer',
-    timeout: 15000,
-    validateStatus: () => true, // 4xx/5xx도 받아서 판단
-    headers: {
-      'User-Agent': UA,
-      'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8',
-      'Referer': referer || 'https://timeticket.co.kr/',
-      'Origin': 'https://timeticket.co.kr',
-      'Sec-Fetch-Dest': 'image',
-      'Sec-Fetch-Mode': 'no-cors',
-      'Sec-Fetch-Site': 'cross-site',
-    },
-  });
+function spoofHeaders(u) {
+  const isTimeTicket = /(^|\.)timeticket\.co\.kr$/i.test(u.hostname);
+  const origin = isTimeTicket ? 'https://timeticket.co.kr/' : `${u.protocol}//${u.hostname}/`;
+  return {
+    'User-Agent':
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36',
+    'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+    'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8',
+    'Referer': origin,
+    'Origin': origin,
+  };
 }
 
+// 실제 이미지 프록시
 router.get('/', async (req, res) => {
-  const raw = req.query.url;
-  const ref = req.query.ref || 'https://timeticket.co.kr/';
-  if (!raw) return res.status(400).send('Image URL is required');
+  const { url } = req.query;
+  if (!url) return res.status(400).send('Missing url');
 
-  let u;
-  try { u = new URL(raw); } catch { return res.status(400).send('Bad URL'); }
-  if (!/^https?:$/.test(u.protocol)) return res.status(400).send('Protocol not allowed');
-  if (!ALLOW.has(u.hostname)) return res.status(400).send('Host not allowed');
+  let u; try { u = new URL(url); } catch { return res.status(400).send('Bad url'); }
 
   try {
-    // 1) 먼저 주어진 URL로 시도
-    let r = await fetchImage(u.href, ref);
+    const upstream = await fetch(u.href, { redirect: 'follow', headers: spoofHeaders(u) });
+    if (!upstream.ok) return res.status(upstream.status).send(`Upstream ${upstream.status}`);
 
-    // 2) 404면 ref 페이지에서 og:image를 찾아 재시도 (리스트 썸네일 404 대비)
-    if (r.status === 404 && ref) {
-      const pr = await axios.get(ref, {
-        timeout: 15000,
-        headers: { 'User-Agent': UA, 'Accept': 'text/html,*/*', 'Referer': 'https://timeticket.co.kr/' },
-        validateStatus: () => true,
-      });
+    const ct = upstream.headers.get('content-type') || 'image/jpeg';
+    res.setHeader('Content-Type', ct);
+    const len = upstream.headers.get('content-length'); if (len) res.setHeader('Content-Length', len);
+    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400');
 
-      if (pr.status >= 200 && pr.status < 300) {
-        const $ = cheerio.load(pr.data);
-        const og = $('meta[property="og:image"]').attr('content');
-        if (og) {
-          const fallbackUrl = new URL(og, 'https://timeticket.co.kr').href;
-          r = await fetchImage(fallbackUrl, ref);
-        }
-      }
-    }
-
-    if (r.status >= 200 && r.status < 300) {
-      const type = r.headers['content-type'] || guessType(u.pathname);
-      res.set('Content-Type', type);
-      res.set('Cache-Control', 'public, max-age=3600');
-      return res.send(r.data);
-    } else {
-      console.error('[image-proxy] upstream non-2xx:', r.status, r.statusText, u.href);
-      return res.status(502).send(`Upstream ${r.status}`);
-    }
+    await stream(upstream.body, res);
   } catch (e) {
-    console.error('[image-proxy] error:', e.code || e.message, u && u.href);
-    return res.status(500).send(`Image proxy error: ${e.code || e.message}`);
+    console.error('image-proxy error:', e);
+    res.status(502).send('Bad gateway (proxy failed)');
+  }
+});
+
+// 디버그용(상태만 확인)
+router.get('/debug', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: 'Missing url' });
+
+  let u; try { u = new URL(url); } catch { return res.status(400).json({ error: 'Bad url' }); }
+
+  try {
+    const headers = spoofHeaders(u);
+    const r = await fetch(u.href, { method: 'GET', redirect: 'manual', headers });
+    res.json({
+      fetched: u.href,
+      status: r.status,
+      upstreamContentType: r.headers.get('content-type'),
+      usedHeaders: headers,
+    });
+  } catch (e) {
+    res.status(502).json({ error: 'fetch failed', message: String(e) });
   }
 });
 
