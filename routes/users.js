@@ -105,7 +105,7 @@ router.get('/all', async (req, res, next) => {
  *               value:
  *                 name: "윤지"
  *                 gender: 1
- *                 userid: "yunji2002"
+ *                 userid: "yunji1234"
  *                 password: "pw1234!"
  *                 country: "Korea"
  *                 language: "Korean"
@@ -162,10 +162,16 @@ router.post('/signup', async (req, res, next) => {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [userid, password]
+ *             required:
+ *               - userid
+ *               - password
  *             properties:
- *               userid:   "yunji2002"
- *               password: "yunjiPassword1234"
+ *               userid:
+ *                 type: string
+ *                 example: "yunji1234"
+ *               password:
+ *                 type: string
+ *                 example: "pw1234!"
  *     responses:
  *       200:
  *         description: 로그인 성공
