@@ -65,7 +65,6 @@ module.exports = swaggerJsdoc({
     },
     tags: [
       { name: 'Users', description: '회원 관련 API' },
-      { name: 'Plays', description: '영화 검색 (KOBIS)' },
       { name: 'Transcribe', description: '번역, 통역 API' },
       { name: "Play", description: '연극 정보 API'},
 

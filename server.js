@@ -12,7 +12,7 @@ const swaggerSpec = require('./docs/swagger');
 // Routers
 const usersRouter = require('./routes/users');
 const transcribeRouter = require('./routes/transcribe');
-const moviesRouter = require('./routes/movies');
+
 const playRouter = require('./routes/play');
 const searchRouter = require('./routes/search');
 // const imageProxy = require('./routes/imageProxy');
@@ -80,7 +80,7 @@ app.use('/image-cache', imageCache); // 선택 사용
 
 app.use('/api/users', usersRouter);
 app.use('/api/transcribe', transcribeRouter);
-app.use('/api/movies', moviesRouter);
+
 app.use('/api/play', playRouter);
 app.use('/api/search', searchRouter);
 
