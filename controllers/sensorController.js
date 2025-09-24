@@ -80,7 +80,7 @@ const getSensorDataById = async (req, res) => {
       });
     }
 
-    const sensor = await Sensor.findOne({ id: sensorId });
+    const sensor = await Sensor.findOne({ id: sensorId }).sort({ createdAt: -1 });
 
     if (!sensor) {
       return res.status(404).json({
