@@ -12,6 +12,8 @@ const swaggerSpec = require('./docs/swagger');
 // Routers
 const usersRouter = require('./routes/users');
 const transcribeRouter = require('./routes/transcribe');
+const sensorRouter = require('./routes/sensor');
+const sensorResultRouter = require('./routes/sensorResult');
 
 const playRouter = require('./routes/play');
 const searchRouter = require('./routes/search');
@@ -80,6 +82,8 @@ app.use('/image-cache', imageCache); // 선택 사용
 
 app.use('/api/users', usersRouter);
 app.use('/api/transcribe', transcribeRouter);
+app.use('/api/sensor', sensorRouter);
+app.use('/api/sensor-result', sensorResultRouter);
 
 app.use('/api/play', playRouter);
 app.use('/api/search', searchRouter);
