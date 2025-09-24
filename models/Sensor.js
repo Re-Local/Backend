@@ -26,7 +26,7 @@ const SensorSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// 기기번호(id)와 시간 조합 인덱스
+// 기기번호(id)와 시간 조합 인덱스 (unique 제거하여 같은 id로 여러 데이터 저장 가능)
 SensorSchema.index({ id: 1, createdAt: -1 });
 
-module.exports = mongoose.model('Sensor', SensorSchema, 'sensors');
+module.exports = mongoose.model('Sensor', SensorSchema, 'sensor_data');
