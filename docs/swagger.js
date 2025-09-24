@@ -61,13 +61,84 @@ module.exports = swaggerJsdoc({
             updatedAt:   { type: 'string', format: 'date-time' },
           },
         },
+
+        // ✅ 하드웨어 센서 데이터 스키마
+        Sensor: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string' },
+            id: { 
+              type: 'integer', 
+              description: '기기번호',
+              example: 123 
+            },
+            temperature: { 
+              type: 'number', 
+              description: '온도 (섭씨)',
+              example: 26.4 
+            },
+            humidity: { 
+              type: 'number', 
+              description: '습도 (%)',
+              example: 63.2 
+            },
+            status: { 
+              type: 'string', 
+              description: '센서 상태',
+              example: 'ok' 
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+
+        // ✅ 센서 분석 결과 스키마
+        SensorResult: {
+          type: 'object',
+          properties: {
+            _id: { type: 'string' },
+            id: { 
+              type: 'integer', 
+              description: '기기번호',
+              example: 123 
+            },
+            temperature: { 
+              type: 'number', 
+              description: '온도 (섭씨)',
+              example: 26.4 
+            },
+            humidity: { 
+              type: 'number', 
+              description: '습도 (%)',
+              example: 63.2 
+            },
+            status: { 
+              type: 'string', 
+              description: '센서 상태 (ok)',
+              example: 'ok' 
+            },
+            user_status: { 
+              type: 'string', 
+              description: '사용자 상태',
+              example: '스트레스 높음' 
+            },
+            timestamp: { 
+              type: 'string', 
+              format: 'date-time',
+              description: '분석 시간',
+              example: '2025-09-22T10:30:00Z'
+            },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+          },
+        },
       },
     },
     tags: [
       { name: 'Users', description: '회원 관련 API' },
       { name: 'Transcribe', description: '번역, 통역 API' },
       { name: "Play", description: '연극 정보 API'},
-
+      { name: 'Sensor', description: '센서 데이터 API' },
     ],
   },
     apis: [path.join(__dirname, '../routes/*.js')],  // Swagger 주석이 포함된 파일 경로
