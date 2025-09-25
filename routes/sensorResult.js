@@ -20,7 +20,7 @@ const {
  *         application/json:
  *           schema:
  *             type: object
- *             required: [id, temperature, humidity, status, user_status]
+ *             required: [id, temperature, humidity, status, user_status, led_signal]
  *             properties:
  *               id:
  *                 type: integer
@@ -41,7 +41,11 @@ const {
  *               user_status:
  *                 type: string
  *                 description: 사용자 상태
- *                 example: "스트레스 높음"
+ *                 example: "stress"
+ *               led_signal:
+ *                 type: string
+ *                 description: LED 불빛 신호
+ *                 example: "yellow"
  *               timestamp:
  *                 type: string
  *                 format: date-time
@@ -55,7 +59,8 @@ const {
  *                 temperature: 26.4
  *                 humidity: 63.2
  *                 status: "ok"
- *                 user_status: "스트레스 높음"
+ *                 user_status: "stress"
+ *                 led_signal: "yellow"
  *                 timestamp: "2025-09-22T10:30:00Z"
  *     responses:
  *       201:
@@ -91,19 +96,9 @@ const {
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 count:
- *                   type: integer
- *                   description: 분석 결과 개수
- *                   example: 5
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/SensorResult'
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/SensorResult'
  *       500:
  *         description: 서버 오류
  */
@@ -133,8 +128,34 @@ const {
  *                 success:
  *                   type: boolean
  *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/SensorResult'
+ *                 id:
+ *                   type: integer
+ *                   example: 123
+ *                 temperature:
+ *                   type: number
+ *                   example: 26.4
+ *                 humidity:
+ *                   type: number
+ *                   example: 63.2
+ *                 status:
+ *                   type: string
+ *                   example: "ok"
+ *                 user_status:
+ *                   type: string
+ *                   example: "stress"
+ *                 led_signal:
+ *                   type: string
+ *                   example: "yellow"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                   example: "2025-09-22T10:30:00Z"
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *                 updatedAt:
+ *                   type: string
+ *                   format: date-time
  *       400:
  *         description: 잘못된 센서 ID
  *       404:

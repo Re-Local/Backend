@@ -27,7 +27,7 @@ const createSensorData = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Hardware sensor data received',
-      data: sensorData
+      ...sensorData.toObject()
     });
 
   } catch (error) {
@@ -52,11 +52,8 @@ const getAllSensorData = async (req, res) => {
   try {
     const sensors = await Sensor.find({}).sort({ createdAt: -1 });
     
-    res.status(200).json({
-      success: true,
-      count: sensors.length,
-      data: sensors
-    });
+    // data 객체 없이 직접 배열 반환
+    res.status(200).json(sensors);
 
   } catch (error) {
     console.error('Sensor retrieval error:', error);
@@ -80,7 +77,7 @@ const getSensorDataById = async (req, res) => {
       });
     }
 
-    const sensor = await Sensor.findOne({ id: sensorId });
+    const sensor = await Sensor.findOne({ id: sensorId }).sort({ createdAt: -1 });
 
     if (!sensor) {
       return res.status(404).json({
@@ -91,7 +88,7 @@ const getSensorDataById = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: sensor
+      ...sensor.toObject()
     });
 
   } catch (error) {

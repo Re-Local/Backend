@@ -4,13 +4,13 @@ const SensorResult = require('../models/SensorResult');
 // POST /api/sensor-result - 데이터 분석 결과 저장
 const createSensorResult = async (req, res) => {
   try {
-    const { id, temperature, humidity, status, user_status, timestamp } = req.body;
+    const { id, temperature, humidity, status, user_status, led_signal, timestamp } = req.body;
 
     // 필수 필드 검증
-    if (!id || temperature === undefined || humidity === undefined || !status || !user_status) {
+    if (!id || temperature === undefined || humidity === undefined || !status || !user_status || !led_signal) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['id', 'temperature', 'humidity', 'status', 'user_status']
+        required: ['id', 'temperature', 'humidity', 'status', 'user_status', 'led_signal']
       });
     }
 
@@ -21,6 +21,7 @@ const createSensorResult = async (req, res) => {
       humidity: parseFloat(humidity),
       status: status,
       user_status: user_status,
+      led_signal: led_signal,
       timestamp: timestamp ? new Date(timestamp) : new Date()
     });
 
@@ -54,11 +55,8 @@ const getAllSensorResults = async (req, res) => {
   try {
     const sensorResults = await SensorResult.find({}).sort({ createdAt: -1 });
     
-    res.status(200).json({
-      success: true,
-      count: sensorResults.length,
-      data: sensorResults
-    });
+    // data 객체 없이 직접 배열 반환
+    res.status(200).json(sensorResults);
 
   } catch (error) {
     console.error('SensorResult retrieval error:', error);
@@ -93,7 +91,7 @@ const getSensorResultById = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: sensorResult
+      ...sensorResult.toObject()
     });
 
   } catch (error) {

@@ -28,6 +28,11 @@ const SensorResultSchema = new mongoose.Schema({
     required: true,
     description: '사용자 상태'
   },
+  led_signal: {
+    type: String,
+    required: true,
+    description: 'LED 불빛 신호'
+  },
   timestamp: {
     type: Date,
     required: true,
