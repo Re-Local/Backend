@@ -120,7 +120,12 @@ module.exports = swaggerJsdoc({
             user_status: { 
               type: 'string', 
               description: '사용자 상태',
-              example: '스트레스 높음' 
+              example: 'stress' 
+            },
+            led_signal: { 
+              type: 'string', 
+              description: 'LED 불빛 신호',
+              example: 'yellow' 
             },
             timestamp: { 
               type: 'string', 

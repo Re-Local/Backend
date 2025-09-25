@@ -88,19 +88,9 @@ const {
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 count:
- *                   type: integer
- *                   description: 센서 데이터 개수
- *                   example: 5
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Sensor'
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Sensor'
  *       500:
  *         description: 서버 오류
  */
@@ -130,8 +120,26 @@ const {
  *                 success:
  *                   type: boolean
  *                   example: true
- *                 data:
- *                   $ref: '#/components/schemas/Sensor'
+ *                 _id:
+ *                   type: string
+ *                 id:
+ *                   type: integer
+ *                   example: 123
+ *                 temperature:
+ *                   type: number
+ *                   example: 26.4
+ *                 humidity:
+ *                   type: number
+ *                   example: 63.2
+ *                 status:
+ *                   type: string
+ *                   example: "ok"
+ *                 createdAt:
+ *                   type: string
+ *                   format: date-time
+ *                 updatedAt:
+ *                   type: string
+ *                   format: date-time
  *       400:
  *         description: 잘못된 센서 ID
  *         content:
